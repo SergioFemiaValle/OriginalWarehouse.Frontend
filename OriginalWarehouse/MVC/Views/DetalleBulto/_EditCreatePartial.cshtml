@@ -1,0 +1,51 @@
+﻿@model OriginalWarehouse.Domain.Entities.DetalleBulto
+
+<form id="editCreateForm" method="post" data-url="/DetalleBulto/Save">
+    <input type="hidden" name="Id" value="@Model.Id" />
+
+    <div class="form-group mb-3">
+        <label for="BultoId">Bulto</label>
+        <select id="BultoId" name="BultoId" class="form-control">
+            <option value="">Seleccione un bulto</option>
+            @foreach (var bulto in (IEnumerable<dynamic>)ViewBag.Bultos)
+            {
+                <option value="@bulto.Id" @(bulto.Id == Model.BultoId ? "selected" : "")>
+                    @bulto.Id
+                </option>
+            }
+        </select>
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="ProductoId">Producto</label>
+        <select id="ProductoId" name="ProductoId" class="form-control">
+            <option value="">Seleccione un producto</option>
+            @foreach (var producto in (IEnumerable<dynamic>)ViewBag.Productos)
+            {
+                <option value="@producto.Id" @(producto.Id == Model.ProductoId ? "selected" : "")>
+                    @producto.Nombre
+                </option>
+            }
+        </select>
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="Cantidad">Cantidad</label>
+        <input type="number" id="Cantidad" name="Cantidad" value="@Model.Cantidad" class="form-control" min="0" />
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="Lote">Lote</label>
+        <input type="text" id="Lote" name="Lote" value="@Model.Lote" class="form-control" />
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="FechaDeCaducidad">Fecha de Caducidad</label>
+        <input type="date" id="FechaDeCaducidad" name="FechaDeCaducidad" value="@Model.FechaDeCaducidad?.ToString("yyyy-MM-dd")" class="form-control" />
+    </div>
+
+    <div class="d-flex justify-content-between mt-3">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <button type="button" class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+    </div>
+</form>

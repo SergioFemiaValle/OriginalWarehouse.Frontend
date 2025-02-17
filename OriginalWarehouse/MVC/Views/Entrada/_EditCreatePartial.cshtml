@@ -1,0 +1,40 @@
+﻿@model OriginalWarehouse.Domain.Entities.Entrada
+
+<form id="editCreateForm" method="post" data-url="/Entrada/Save">
+    <input type="hidden" name="Id" value="@Model.Id" />
+
+    <div class="form-group mb-3">
+        <label for="Fecha">Fecha</label>
+        <input type="datetime-local" id="Fecha" name="Fecha"
+               value="@Model.Fecha.ToString("yyyy-MM-ddTHH:mm")" class="form-control" required />
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="UsuarioId">Usuario</label>
+        <select id="UsuarioId" name="UsuarioId" class="form-control">
+            <option value="0" @(Model.UsuarioId == 0 ? "selected" : "")>Seleccione un usuario</option>
+            @foreach (var usuario in (IEnumerable<dynamic>)ViewBag.Usuarios)
+            {
+                <option value="@usuario.Id" @(usuario.Id == Model.UsuarioId ? "selected" : "")>
+                    @usuario.Nombre
+                </option>
+            }
+        </select>
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="BultoId">Bulto</label>
+        <select id="BultoId" name="BultoId" class="form-control">
+            <option value="0" @(Model.BultoId == 0 ? "selected" : "")>Seleccione un bulto</option>
+            @foreach (var bulto in (IEnumerable<dynamic>)ViewBag.Bultos)
+            {
+                <option value="@bulto.Id" @(bulto.Id == Model.BultoId ? "selected" : "")>
+                    @bulto.Descripcion
+                </option>
+            }
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Guardar</button>
+    <button type="button" class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+</form>

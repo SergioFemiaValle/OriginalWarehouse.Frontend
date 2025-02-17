@@ -1,0 +1,87 @@
+﻿/* Estilos generales */
+body {
+    background-color: #f8f9fa; /* Fondo claro */
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Contenedor principal */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Tarjeta de inicio de sesión */
+.login-card {
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 400px;
+}
+
+    /* Título centrado */
+    .login-card h2 {
+        font-size: 24px;
+        font-weight: bold;
+        color: #155724;
+        margin-bottom: 20px;
+    }
+
+    /* Iconos en los labels */
+    .login-card .form-group label {
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+    }
+
+        .login-card .form-group label i {
+            margin-right: 5px;
+            color: #28a745;
+        }
+
+    /* Inputs */
+    .login-card .form-control {
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        padding: 10px;
+        font-size: 16px;
+    }
+
+/* Botón de inicio de sesión */
+.btn-login {
+    background-color: #28a745;
+    color: white;
+    font-weight: bold;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+    width: 100%;
+    margin-top: 15px;
+}
+
+    .btn-login:hover {
+        background-color: #218838;
+    }
+
+/* Alerta de error */
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+/* Ajuste responsive */
+@media (max-width: 480px) {
+    .login-card {
+        padding: 20px;
+        width: 90%;
+    }
+}

@@ -1,0 +1,15 @@
+﻿@model OriginalWarehouse.Domain.Entities.AlmacenamientoEspecial
+
+<form id="editCreateForm" method="post" data-url="/AlmacenamientoEspecial/Save">
+    <input type="hidden" name="Id" value="@Model.Id" />
+    <div class="form-group mb-3">
+        <label for="Nombre">Nombre</label>
+        <input type="text" id="Nombre" name="Nombre" value="@Model.Nombre" class="form-control" />
+        <span asp-validation-for="Nombre" class="text-danger"></span>
+    </div>
+
+    <div class="d-flex justify-content-between mt-3">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <button type="button" class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+    </div>
+</form>

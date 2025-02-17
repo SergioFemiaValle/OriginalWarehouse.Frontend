@@ -1,0 +1,146 @@
+﻿@model IEnumerable<OriginalWarehouse.Domain.Entities.Bulto>
+
+<h1>Gestión de Bultos</h1>
+
+<div class="mb-3">
+    <button class="btn btn-success" onclick="abrirModal(null)">Crear Bulto</button>
+    <a href="/Bulto/ExportarExcel" class="btn btn-success">📥 Exportar a Excel</a>
+</div>
+
+<!-- 🔹 Filtros de búsqueda con ComboBox -->
+<div class="row mb-3">
+    <div class="col-md-5">
+        <label for="ubicacionFiltro">Ubicación</label>
+        <select id="ubicacionFiltro" class="form-control">
+            <option value="">Todas</option>
+            @foreach (var ubicacion in ViewBag.Ubicaciones)
+            {
+                <option value="@ubicacion" selected="@(ubicacion == ViewBag.UbicacionFiltro ? "selected" : null)">@ubicacion</option>
+            }
+        </select>
+    </div>
+
+    <div class="col-md-5">
+        <label for="estadoFiltro">Estado</label>
+        <select id="estadoFiltro" class="form-control">
+            <option value="">Todos</option>
+            @foreach (var estado in ViewBag.Estados)
+            {
+                <option value="@estado" selected="@(estado == ViewBag.EstadoFiltro ? "selected" : null)">@estado</option>
+            }
+        </select>
+    </div>
+
+    <div class="col-md-2 mt-4 text-center">
+        <button class="btn btn-primary" onclick="aplicarFiltros()">🔍 Filtrar</button>
+        <button class="btn btn-secondary" onclick="limpiarFiltros()">❌ Limpiar</button>
+    </div>
+</div>
+
+<table id="bultosTable" class="table table-striped">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Descripción</th>
+            <th>Ubicación Actual</th>
+            <th>Estado</th>
+            @if (User.IsInRole("Administrador"))
+            {
+                <th>Acciones</th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var bulto in Model)
+        {
+            <tr>
+                <td>@bulto.Id</td>
+                <td>@bulto.Descripcion</td>
+                <td>@bulto.UbicacionActual</td>
+                <td>@bulto.Estado?.Nombre</td>
+                @if (User.IsInRole("Administrador"))
+                {
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick="abrirModal(@bulto.Id)">Editar</button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarBulto(@bulto.Id)">Eliminar</button>
+                    </td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- 🔹 Paginación -->
+<div class="pagination text-center">
+    @if (ViewBag.CurrentPage > 1)
+    {
+        <a href="?page=@(ViewBag.CurrentPage - 1)&ubicacion=@ViewBag.UbicacionFiltro&estado=@ViewBag.EstadoFiltro" class="btn btn-secondary">⬅ Anterior</a>
+    }
+
+    @for (int i = 1; i <= ViewBag.TotalPages; i++)
+    {
+        <a href="?page=@i&ubicacion=@ViewBag.UbicacionFiltro&estado=@ViewBag.EstadoFiltro" class="btn @(i == ViewBag.CurrentPage ? "btn-primary" : "btn-outline-primary")">@i</a>
+    }
+
+    @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+    {
+        <a href="?page=@(ViewBag.CurrentPage + 1)&ubicacion=@ViewBag.UbicacionFiltro&estado=@ViewBag.EstadoFiltro" class="btn btn-secondary">Siguiente ➡</a>
+    }
+</div>
+
+<!-- Modal -->
+<div id="editCreateModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar/Crear Bulto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Aquí se cargará la vista parcial -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function abrirModal(id) {
+            const url = id ? `/Bulto/EditPartial/${id}` : `/Bulto/EditPartial`;
+            $.get(url, function (data) {
+                $('#editCreateModal .modal-body').html(data);
+                $('#editCreateModal').modal('show');
+            });
+        }
+
+        function cerrarModal() {
+            $('#editCreateModal').modal('hide');
+        }
+
+        function eliminarBulto(id) {
+            if (confirm("¿Está seguro de eliminar este bulto?")) {
+                $.ajax({
+                    url: `/Bulto/Delete/${id}`,
+                    type: "POST",
+                    success: function () {
+                        alert("Bulto eliminado correctamente.");
+                        location.reload();
+                    },
+                    error: function () {
+                        alert("Ocurrió un error al intentar eliminar el bulto.");
+                    }
+                });
+            }
+        }
+
+        function aplicarFiltros() {
+            let ubicacion = document.getElementById("ubicacionFiltro").value;
+            let estado = document.getElementById("estadoFiltro").value;
+            window.location.href = `?ubicacion=${ubicacion}&estado=${estado}`;
+        }
+
+        function limpiarFiltros() {
+            window.location.href = "?";
+        }
+    </script>
+}

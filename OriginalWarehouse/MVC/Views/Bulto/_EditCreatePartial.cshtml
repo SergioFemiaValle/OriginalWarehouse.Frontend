@@ -1,0 +1,35 @@
+﻿@model OriginalWarehouse.Domain.Entities.Bulto
+
+<form id="editCreateForm" method="post" data-url="/Bulto/Save">
+    <input type="hidden" name="Id" value="@Model.Id" />
+
+    <div class="form-group mb-3">
+        <label for="Descripcion">Descripción</label>
+        <input type="text" id="Descripcion" name="Descripcion" value="@Model.Descripcion" class="form-control" required />
+        <span asp-validation-for="Descripcion" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="UbicacionActual">Ubicación Actual</label>
+        <input type="text" id="UbicacionActual" name="UbicacionActual" value="@Model.UbicacionActual" class="form-control" required />
+        <span asp-validation-for="UbicacionActual" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="EstadoId">Estado</label>
+        <select id="EstadoId" name="EstadoId" class="form-control">
+            <option value="">Seleccione un estado</option>
+            @foreach (var estado in (IEnumerable<dynamic>)ViewBag.Estados)
+            {
+                <option value="@estado.Id" @(estado.Id == Model.EstadoId ? "selected" : "")>
+                    @estado.Nombre
+                </option>
+            }
+        </select>
+    </div>
+
+    <div class="d-flex justify-content-between mt-3">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <button type="button" class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+    </div>
+</form>

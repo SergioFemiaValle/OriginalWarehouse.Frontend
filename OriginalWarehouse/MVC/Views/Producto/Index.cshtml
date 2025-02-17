@@ -1,0 +1,117 @@
+﻿@model IEnumerable<OriginalWarehouse.Domain.Entities.Producto>
+
+<h1>Gestión de Productos</h1>
+
+<div class="mb-3">
+    <button class="btn btn-success" onclick="abrirModal(null)">Crear Producto</button>
+    <a href="/Producto/ExportarExcel" class="btn btn-success">📥 Exportar a Excel</a>
+</div>
+
+<!-- 🔹 Formulario para filtros -->
+<form method="get" class="mb-3">
+    <div class="row">
+        <div class="col-md-4">
+            <input type="text" name="searchNombre" class="form-control" placeholder="Buscar por Nombre" value="@ViewBag.SearchNombre">
+        </div>
+        <div class="col-md-4">
+            <select name="searchCategoria" class="form-control">
+                <option value="">Todas las Categorías</option>
+                @foreach (var categoria in Model.Select(p => p.Categoria?.Nombre).Distinct().Where(c => c != null))
+                {
+                    <option value="@categoria" selected="@(categoria == ViewBag.SearchCategoria ? "selected" : null)">@categoria</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary">🔍 Buscar</button>
+        </div>
+        <div class="col-md-2">
+            <a href="/Producto" class="btn btn-secondary">🔄 Reset</a>
+        </div>
+    </div>
+</form>
+
+<table id="productosTable" class="table table-striped">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Nombre</th>
+            <th>Categoría</th>
+            <th>Precio</th>
+            <th>Cantidad</th>
+            @if (User.IsInRole("Administrador"))
+            {
+                <th>Acciones</th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var producto in Model)
+        {
+            <tr>
+                <td>@producto.Id</td>
+                <td>@producto.Nombre</td>
+                <td>@producto.Categoria?.Nombre</td>
+                <td>@producto.Precio.ToString("C")</td>
+                <td>@producto.CantidadEnStock</td>
+                @if (User.IsInRole("Administrador"))
+                {
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick="abrirModal(@producto.Id)">Editar</button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarProducto(@producto.Id)">Eliminar</button>
+                    </td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- 🔹 Paginación -->
+<div class="pagination">
+    @if (ViewBag.CurrentPage > 1)
+    {
+        <a href="?searchNombre=@ViewBag.SearchNombre&searchCategoria=@ViewBag.SearchCategoria&page=@(ViewBag.CurrentPage - 1)" class="btn btn-secondary">⬅ Anterior</a>
+    }
+
+    @for (int i = 1; i <= ViewBag.TotalPages; i++)
+    {
+        <a href="?searchNombre=@ViewBag.SearchNombre&searchCategoria=@ViewBag.SearchCategoria&page=@i" class="btn @(i == ViewBag.CurrentPage ? "btn-primary" : "btn-outline-primary")">@i</a>
+    }
+
+    @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+    {
+        <a href="?searchNombre=@ViewBag.SearchNombre&searchCategoria=@ViewBag.SearchCategoria&page=@(ViewBag.CurrentPage + 1)" class="btn btn-secondary">Siguiente ➡</a>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function abrirModal(id) {
+            const url = id ? `/Producto/EditPartial/${id}` : `/Producto/EditPartial`;
+            $.get(url, function (data) {
+                $('#editCreateModal .modal-body').html(data);
+                $('#editCreateModal').modal('show');
+            });
+        }
+
+        function cerrarModal() {
+            $('#editCreateModal').modal('hide');
+        }
+
+        function eliminarProducto(id) {
+            if (confirm("¿Está seguro de eliminar este producto?")) {
+                $.ajax({
+                    url: `/Producto/Delete/${id}`,
+                    type: "POST",
+                    success: function () {
+                        alert("Producto eliminado correctamente.");
+                        location.reload();
+                    },
+                    error: function () {
+                        alert("Ocurrió un error al intentar eliminar el producto.");
+                    }
+                });
+            }
+        }
+    </script>
+}

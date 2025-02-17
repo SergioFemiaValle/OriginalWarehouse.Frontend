@@ -1,0 +1,138 @@
+﻿@model IEnumerable<OriginalWarehouse.Domain.Entities.DetalleBulto>
+
+<h1>Gestión de Detalles de Bultos</h1>
+
+<div class="mb-3">
+    <button class="btn btn-success" onclick="abrirModal(null)">Crear Detalle</button>
+    <a href="/DetalleBulto/ExportarExcel" class="btn btn-success">📥 Exportar a Excel</a>
+</div>
+
+<!-- 🔹 Filtros de búsqueda -->
+<div class="row mb-3">
+    <div class="col-md-5">
+        <label for="nombreFiltro">Nombre del Producto</label>
+        <input type="text" id="nombreFiltro" class="form-control" placeholder="Buscar por nombre" value="@ViewBag.NombreFiltro">
+    </div>
+
+    <div class="col-md-5">
+        <label for="loteFiltro">Lote</label>
+        <input type="text" id="loteFiltro" class="form-control" placeholder="Buscar por lote" value="@ViewBag.LoteFiltro">
+    </div>
+
+    <div class="col-md-2 mt-4 text-center">
+        <button class="btn btn-primary" onclick="aplicarFiltros()">🔍 Filtrar</button>
+        <button class="btn btn-secondary" onclick="limpiarFiltros()">❌ Limpiar</button>
+    </div>
+</div>
+
+<table id="detallesTable" class="table table-striped">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Bulto</th>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Lote</th>
+            <th>Fecha de Caducidad</th>
+            @if (User.IsInRole("Administrador"))
+            {
+                <th>Acciones</th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var detalle in Model)
+        {
+            <tr>
+                <td>@detalle.Id</td>
+                <td>@detalle.Bulto?.Id</td>
+                <td>@detalle.Producto?.Nombre</td>
+                <td>@detalle.Cantidad</td>
+                <td>@detalle.Lote</td>
+                <td>@detalle.FechaDeCaducidad?.ToString("dd/MM/yyyy")</td>
+                @if (User.IsInRole("Administrador"))
+                {
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick="abrirModal(@detalle.Id)">Editar</button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarDetalle(@detalle.Id)">Eliminar</button>
+                    </td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- 🔹 Paginación -->
+<div class="pagination text-center">
+    @if (ViewBag.CurrentPage > 1)
+    {
+        <a href="?page=@(ViewBag.CurrentPage - 1)&nombre=@ViewBag.NombreFiltro&lote=@ViewBag.LoteFiltro" class="btn btn-secondary">⬅ Anterior</a>
+    }
+
+    @for (int i = 1; i <= ViewBag.TotalPages; i++)
+    {
+        <a href="?page=@i&nombre=@ViewBag.NombreFiltro&lote=@ViewBag.LoteFiltro" class="btn @(i == ViewBag.CurrentPage ? "btn-primary" : "btn-outline-primary")">@i</a>
+    }
+
+    @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+    {
+        <a href="?page=@(ViewBag.CurrentPage + 1)&nombre=@ViewBag.NombreFiltro&lote=@ViewBag.LoteFiltro" class="btn btn-secondary">Siguiente ➡</a>
+    }
+</div>
+
+<!-- Modal -->
+<div id="editCreateModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar/Crear Detalle de Bulto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Aquí se cargará la vista parcial -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function abrirModal(id) {
+            const url = id ? `/DetalleBulto/EditPartial/${id}` : `/DetalleBulto/EditPartial`;
+            $.get(url, function (data) {
+                $('#editCreateModal .modal-body').html(data);
+                $('#editCreateModal').modal('show');
+            });
+        }
+
+        function cerrarModal() {
+            $('#editCreateModal').modal('hide');
+        }
+
+        function eliminarDetalle(id) {
+            if (confirm("¿Está seguro de eliminar este detalle de bulto?")) {
+                $.ajax({
+                    url: `/DetalleBulto/Delete/${id}`,
+                    type: "POST",
+                    success: function () {
+                        alert("Detalle de bulto eliminado correctamente.");
+                        location.reload();
+                    },
+                    error: function () {
+                        alert("Ocurrió un error al intentar eliminar el detalle.");
+                    }
+                });
+            }
+        }
+
+        function aplicarFiltros() {
+            let nombre = document.getElementById("nombreFiltro").value;
+            let lote = document.getElementById("loteFiltro").value;
+            window.location.href = `?nombre=${nombre}&lote=${lote}`;
+        }
+
+        function limpiarFiltros() {
+            window.location.href = "?";
+        }
+    </script>
+}

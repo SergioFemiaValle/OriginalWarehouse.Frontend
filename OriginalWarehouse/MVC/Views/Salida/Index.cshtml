@@ -1,0 +1,132 @@
+﻿@model IEnumerable<OriginalWarehouse.Domain.Entities.Salida>
+
+<h1>Gestión de Salidas</h1>
+
+<div class="mb-3">
+    <button class="btn btn-success" onclick="abrirModal(null)">Registrar Salida</button>
+    <a href="/Salida/ExportarExcel" class="btn btn-success">📥 Exportar a Excel</a>
+</div>
+
+<!-- 🔹 Filtros de búsqueda -->
+<div class="row mb-3">
+    <div class="col-md-4">
+        <input type="text" id="usuarioFiltro" class="form-control" placeholder="Buscar por Usuario" value="@ViewBag.UsuarioFiltro">
+    </div>
+    <div class="col-md-4">
+        <input type="text" id="bultoFiltro" class="form-control" placeholder="Buscar por Bulto" value="@ViewBag.BultoFiltro">
+    </div>
+    <div class="col-md-4">
+        <button class="btn btn-primary" onclick="aplicarFiltros()">🔍 Filtrar</button>
+        <button class="btn btn-secondary" onclick="limpiarFiltros()">❌ Limpiar</button>
+    </div>
+</div>
+
+<table id="salidasTable" class="table table-striped">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Fecha</th>
+            <th>Usuario</th>
+            <th>Bulto</th>
+            @if (User.IsInRole("Administrador"))
+            {
+                <th>Acciones</th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var salida in Model)
+        {
+            <tr>
+                <td>@salida.Id</td>
+                <td>@salida.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                <td>@salida.Usuario?.UserName</td>
+                <td>@salida.Bulto?.Descripcion</td>
+                @if (User.IsInRole("Administrador"))
+                {
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick="abrirModal(@salida.Id)">Editar</button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarSalida(@salida.Id)">Eliminar</button>
+                    </td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- 🔹 Paginación -->
+<div class="pagination">
+    @if (ViewBag.CurrentPage > 1)
+    {
+        <a href="?page=@(ViewBag.CurrentPage - 1)&usuario=@ViewBag.UsuarioFiltro&bulto=@ViewBag.BultoFiltro" class="btn btn-secondary">⬅ Anterior</a>
+    }
+
+    @for (int i = 1; i <= ViewBag.TotalPages; i++)
+    {
+        <a href="?page=@i&usuario=@ViewBag.UsuarioFiltro&bulto=@ViewBag.BultoFiltro" class="btn @(i == ViewBag.CurrentPage ? "btn-primary" : "btn-outline-primary")">@i</a>
+    }
+
+    @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+    {
+        <a href="?page=@(ViewBag.CurrentPage + 1)&usuario=@ViewBag.UsuarioFiltro&bulto=@ViewBag.BultoFiltro" class="btn btn-secondary">Siguiente ➡</a>
+    }
+</div>
+
+<!-- Modal -->
+<div id="editCreateModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar/Crear Salida</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Aquí se cargará la vista parcial -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function abrirModal(id) {
+            const url = id ? `/Salida/EditPartial/${id}` : `/Salida/EditPartial`;
+            $.get(url, function (data) {
+                $('#editCreateModal .modal-body').html(data);
+                $('#editCreateModal').modal('show');
+            });
+        }
+
+        function cerrarModal() {
+            $('#editCreateModal').modal('hide');
+        }
+
+        function eliminarSalida(id) {
+            if (confirm("¿Está seguro de eliminar esta salida?")) {
+                $.ajax({
+                    url: `/Salida/Delete/${id}`,
+                    type: "POST",
+                    success: function () {
+                        alert("Salida eliminada correctamente.");
+                        location.reload();
+                    },
+                    error: function () {
+                        alert("Ocurrió un error al intentar eliminar la salida.");
+                    }
+                });
+            }
+        }
+
+        // ✅ Aplicar filtros y recargar la página
+        function aplicarFiltros() {
+            let usuario = document.getElementById("usuarioFiltro").value;
+            let bulto = document.getElementById("bultoFiltro").value;
+            window.location.href = `?page=1&usuario=${encodeURIComponent(usuario)}&bulto=${encodeURIComponent(bulto)}`;
+        }
+
+        // ✅ Limpiar filtros y recargar la página
+        function limpiarFiltros() {
+            window.location.href = "?page=1";
+        }
+    </script>
+}

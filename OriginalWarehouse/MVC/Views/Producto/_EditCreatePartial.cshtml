@@ -1,0 +1,54 @@
+﻿@model OriginalWarehouse.Domain.Entities.Producto
+
+<form id="editCreateForm" method="post" data-url="/Producto/Save">
+    <input type="hidden" name="Id" value="@Model.Id" />
+    <div class="form-group mb-3">
+        <label for="Nombre">Nombre</label>
+        <input type="text" id="Nombre" name="Nombre" value="@Model.Nombre" class="form-control" />
+        <span asp-validation-for="Nombre" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="Precio">Precio</label>
+        <input type="number" id="Precio" name="Precio" value="@Model.Precio.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" step="0.01" min="0.01" />
+        <span asp-validation-for="Precio" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="CantidadEnStock">Cantidad en Stock</label>
+        <input type="number" id="CantidadEnStock" name="CantidadEnStock" value="@Model.CantidadEnStock" class="form-control" min="0" />
+        <span asp-validation-for="CantidadEnStock" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="CategoriaId">Categoría</label>
+        <select id="CategoriaId" name="CategoriaId" class="form-control">
+            <option value="">Seleccione una categoría</option>
+            @foreach (var categoria in (IEnumerable<dynamic>)ViewBag.Categorias)
+            {
+                <option value="@categoria.Id" @(categoria.Id == Model.CategoriaId ? "selected" : "")>
+                    @categoria.Nombre
+                </option>
+            }
+        </select>
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="AlmacenamientoEspecialId">Almacenamiento Especial</label>
+        <select id="AlmacenamientoEspecialId" name="AlmacenamientoEspecialId" class="form-control">
+            <option value="">Seleccione un almacenamiento especial</option>
+            @foreach (var almacenamiento in (IEnumerable<dynamic>)ViewBag.AlmacenamientosEspeciales)
+            {
+                <option value="@almacenamiento.Id" @(almacenamiento.Id == Model.AlmacenamientoEspecialId ? "selected" : "")>
+                    @almacenamiento.Nombre
+                </option>
+            }
+        </select>
+    </div>
+
+    <!-- Botones -->
+    <div class="d-flex justify-content-between mt-3">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <button type="button" class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+    </div>
+</form>

@@ -1,0 +1,104 @@
+﻿@model IEnumerable<OriginalWarehouse.Domain.Entities.EstadoBulto>
+
+<h1>Gestión de Estados de Bultos</h1>
+
+@if (User.IsInRole("Administrador"))
+{
+    <div class="mb-3">
+        <button class="btn btn-success" onclick="abrirModal(null)">Crear Estado</button>
+    </div>
+}
+
+<table id="estadosBultoTable" class="table table-striped">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Nombre</th>
+            @if (User.IsInRole("Administrador"))
+            {
+                <th>Acciones</th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var estado in Model)
+        {
+            <tr>
+                <td>@estado.Id</td>
+                <td>@estado.Nombre</td>
+                @if (User.IsInRole("Administrador"))
+                {
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick="abrirModal(@estado.Id)">Editar</button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarEstado(@estado.Id)">Eliminar</button>
+                    </td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- 🔹 Paginación -->
+<div class="pagination">
+    @if (ViewBag.CurrentPage > 1)
+    {
+        <a href="?page=@(ViewBag.CurrentPage - 1)" class="btn btn-secondary">⬅ Anterior</a>
+    }
+
+    @for (int i = 1; i <= ViewBag.TotalPages; i++)
+    {
+        <a href="?page=@i" class="btn @(i == ViewBag.CurrentPage ? "btn-primary" : "btn-outline-primary")">@i</a>
+    }
+
+    @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+    {
+        <a href="?page=@(ViewBag.CurrentPage + 1)" class="btn btn-secondary">Siguiente ➡</a>
+    }
+</div>
+
+<!-- Modal -->
+<div id="editCreateModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar/Crear Estado de Bulto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Aquí se cargará la vista parcial -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function abrirModal(id) {
+            const url = id ? `/EstadoBulto/EditPartial/${id}` : `/EstadoBulto/EditPartial`;
+            $.get(url, function (data) {
+                $('#editCreateModal .modal-body').html(data);
+                $('#editCreateModal').modal('show');
+            });
+        }
+
+        function cerrarModal() {
+            $('#editCreateModal').modal('hide');
+        }
+
+        function eliminarEstado(id) {
+            if (confirm("¿Está seguro de eliminar este estado?")) {
+                $.ajax({
+                    url: `/EstadoBulto/Delete/${id}`,
+                    type: "POST",
+                    success: function () {
+                        alert("Estado de bulto eliminado correctamente.");
+                        location.reload();
+                    },
+                    error: function () {
+                        alert("Ocurrió un error al intentar eliminar el estado.");
+                    }
+                });
+            }
+        }
+    </script>
+}

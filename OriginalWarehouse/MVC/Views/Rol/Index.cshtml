@@ -1,0 +1,102 @@
+﻿@model IEnumerable<Microsoft.AspNetCore.Identity.IdentityRole<int>>
+
+<h1>Gestión de Roles</h1>
+
+@* <div class="mb-3">
+    <button class="btn btn-success" onclick="abrirModal(null)">Crear Rol</button>
+</div> *@
+
+<table id="rolesTable" class="table table-striped">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Nombre</th>
+            @* <th>Acciones</th> *@
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var rol in Model)
+        {
+            <tr>
+                <td>@rol.Id</td>
+                <td>@rol.Name</td>
+                @* <td>
+                    <button class="btn btn-primary btn-sm" onclick="abrirModal(@rol.Id)">Editar</button>
+                    <button class="btn btn-danger btn-sm" onclick="eliminarRol(@rol.Id)">Eliminar</button>
+                </td> *@
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- Modal -->
+<div id="editCreateModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar/Crear Rol</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Aquí se cargará la vista parcial -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function abrirModal(id) {
+            const url = id ? `/Rol/EditPartial/${id}` : `/Rol/EditPartial`;
+            $.get(url, function (data) {
+                $('#editCreateModal .modal-body').html(data);
+                $('#editCreateModal').modal('show');
+            });
+        }
+
+        function cerrarModal() {
+            $('#editCreateModal').modal('hide');
+        }
+
+        $(document).on("submit", "#editCreateForm", function (e) {
+            e.preventDefault();
+
+            const form = $(this);
+            const url = form.data("url");
+
+            $.ajax({
+                url: url,
+                method: "POST",
+                data: form.serialize(),
+                success: function (response) {
+                    if (response.success) {
+                        cerrarModal();
+                        alert(response.message);
+                        location.reload();
+                    } else {
+                        $('#editCreateModal .modal-body').html(response.html);
+                    }
+                },
+                error: function () {
+                    alert("Ocurrió un error al procesar la solicitud.");
+                }
+            });
+        });
+
+        function eliminarRol(id) {
+            if (confirm("¿Está seguro de eliminar este rol?")) {
+                $.ajax({
+                    url: `/Rol/Delete/${id}`,
+                    type: "POST",
+                    success: function () {
+                        alert("Rol eliminado correctamente.");
+                        location.reload();
+                    },
+                    error: function () {
+                        alert("Ocurrió un error al intentar eliminar el rol.");
+                    }
+                });
+            }
+        }
+    </script>
+}
