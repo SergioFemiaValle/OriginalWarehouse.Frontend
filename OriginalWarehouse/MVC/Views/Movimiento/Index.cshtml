@@ -113,3 +113,92 @@
         <a href="?page=@(ViewBag.CurrentPage + 1)&usuario=@ViewBag.UsuarioFiltro&bulto=@ViewBag.BultoFiltro&ubicacionOrigen=@ViewBag.UbicacionOrigenFiltro&ubicacionDestino=@ViewBag.UbicacionDestinoFiltro" class="btn btn-secondary">Siguiente ➡</a>
     }
 </div>
+
+<!-- Modal -->
+<div id="editCreateModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar/Crear Movimiento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Aquí se cargará la vista parcial -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function abrirModal(id) {
+            const url = id ? `/Movimiento/EditPartial/${id}` : `/Movimiento/EditPartial`;
+            $.get(url, function (data) {
+                $('#editCreateModal .modal-body').html(data);
+                $('#editCreateModal').modal('show');
+            });
+        }
+
+        function cerrarModal() {
+            $('#editCreateModal').modal('hide');
+        }
+
+        $(document).on("submit", "#editCreateForm", function (e) {
+            e.preventDefault();
+
+            const form = $(this);
+            const url = form.data("url");
+
+            $.ajax({
+                url: url,
+                method: "POST",
+                data: form.serialize(),
+                success: function (response) {
+                    if (response.success) {
+                        cerrarModal();
+                        alert(response.message);
+                        location.reload();
+                    } else {
+                        $('#editCreateModal .modal-body').html(response.html);
+                    }
+                },
+                error: function () {
+                    alert("Ocurrió un error al procesar la solicitud.");
+                }
+            });
+        });
+
+        function eliminarMovimiento(id) {
+            if (confirm("¿Está seguro de eliminar este movimiento?")) {
+                $.ajax({
+                    url: `/Movimiento/Delete/${id}`,
+                    type: "POST",
+                    success: function () {
+                        alert("Movimiento eliminado correctamente.");
+                        location.reload();
+                    },
+                    error: function () {
+                        alert("Ocurrió un error al intentar eliminar el movimiento.");
+                    }
+                });
+            }
+        }
+
+        // ✅ Aplicar filtros y recargar la página con todos los filtros seleccionados
+        function aplicarFiltros() {
+            let usuario = document.getElementById("usuarioFiltro").value;
+            let bulto = document.getElementById("bultoFiltro").value;
+            let ubicacionOrigen = document.getElementById("ubicacionOrigenFiltro").value;
+            let ubicacionDestino = document.getElementById("ubicacionDestinoFiltro").value;
+
+            // Redirigir a la misma página con los filtros aplicados
+            window.location.href = `?page=1&usuario=${encodeURIComponent(usuario)}&bulto=${encodeURIComponent(bulto)}&ubicacionOrigen=${encodeURIComponent(ubicacionOrigen)}&ubicacionDestino=${encodeURIComponent(ubicacionDestino)}`;
+        }
+
+        // ✅ Limpiar filtros y recargar la página
+        function limpiarFiltros() {
+            window.location.href = "?page=1";
+        }
+
+    </script>
+}

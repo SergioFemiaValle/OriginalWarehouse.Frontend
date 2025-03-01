@@ -85,6 +85,31 @@
             $('#editCreateModal').modal('hide');
         }
 
+        $(document).on("submit", "#editCreateForm", function (e) {
+            e.preventDefault();
+
+            const form = $(this);
+            const url = form.data("url");
+
+            $.ajax({
+                url: url,
+                method: "POST",
+                data: form.serialize(),
+                success: function (response) {
+                    if (response.success) {
+                        cerrarModal();
+                        alert(response.message);
+                        location.reload();
+                    } else {
+                        $('#editCreateModal .modal-body').html(response.html);
+                    }
+                },
+                error: function () {
+                    alert("Ocurrió un error al procesar la solicitud.");
+                }
+            });
+        });
+
         function eliminarEstado(id) {
             if (confirm("¿Está seguro de eliminar este estado?")) {
                 $.ajax({
