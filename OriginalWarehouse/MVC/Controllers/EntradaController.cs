@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using OfficeOpenXml;
 using OriginalWarehouse.Application.Interfaces;
+using OriginalWarehouse.Application.Managers;
 using OriginalWarehouse.Domain.Entities;
 
 namespace OriginalWarehouse.Web.MVC.Controllers
@@ -15,13 +16,19 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         private readonly UserManager<Usuario> _userManager; // Usamos Identity
         private readonly IBultoManager _bultoManager;
         private readonly ICompositeViewEngine _viewEngine;
+        private readonly IDetalleBultoManager _detalleBultoManager;
+        private readonly IProductoManager _productoManager;
 
-        public EntradaController(IEntradaManager entradaManager, UserManager<Usuario> userManager, IBultoManager bultoManager, ICompositeViewEngine viewEngine)
+        public EntradaController(IEntradaManager entradaManager, UserManager<Usuario> userManager,
+            IBultoManager bultoManager, ICompositeViewEngine viewEngine
+            , IDetalleBultoManager detalleBultoManager, IProductoManager productoManager)
         {
             _entradaManager = entradaManager;
             _userManager = userManager; // Agregado
             _bultoManager = bultoManager;
             _viewEngine = viewEngine;
+            _detalleBultoManager = detalleBultoManager;
+            _productoManager = productoManager;
         }
 
         public async Task<IActionResult> Index(int page = 1, int pageSize = 10, string usuario = "", string bulto = "")
@@ -79,17 +86,64 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 if (entrada.Id == 0)
                 {
                     await _entradaManager.Crear(entrada);
+
+                    // 🔹 Obtener el bulto de la entrada
+                    var bulto = await _bultoManager.ObtenerPorId(entrada.BultoId);
+                    if (bulto != null)
+                    {
+                        // 🔹 Obtener los productos en DetalleBulto
+                        var detalles = (await _detalleBultoManager.ObtenerTodos())
+                            .Where(d => d.BultoId == entrada.BultoId);
+                        foreach (var detalle in detalles)
+                        {
+                            var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                            if (producto != null)
+                            {
+                                producto.CantidadEnStock += detalle.Cantidad;
+                                await _productoManager.Actualizar(producto);
+                            }
+                        }
+                    }
                 }
                 else
                 {
                     var entradaExistente = await _entradaManager.ObtenerPorId(entrada.Id);
                     if (entradaExistente == null) return NotFound();
 
+                    // 🔹 Obtener los detalles anteriores de la entrada antes de modificarla
+                    var detallesAnteriores = (await _detalleBultoManager.ObtenerTodos())
+                        .Where(d => d.BultoId == entradaExistente.BultoId);
+
+                    foreach (var detalle in detallesAnteriores)
+                    {
+                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                        if (producto != null)
+                        {
+                            producto.CantidadEnStock -= detalle.Cantidad; // Restar las cantidades anteriores
+                            await _productoManager.Actualizar(producto);
+                        }
+                    }
+
+                    // 🔹 Actualizar la entrada
                     entradaExistente.Fecha = entrada.Fecha;
-                    entradaExistente.UsuarioId = entrada.UsuarioId; // Convertimos a string
+                    entradaExistente.UsuarioId = entrada.UsuarioId;
                     entradaExistente.BultoId = entrada.BultoId;
 
                     await _entradaManager.Actualizar(entradaExistente);
+
+                    // 🔹 Obtener los nuevos detalles después de la actualización
+                    var detallesNuevos = (await _detalleBultoManager.ObtenerTodos())
+                        .Where(d => d.BultoId == entrada.BultoId);
+
+                    foreach (var detalle in detallesNuevos)
+                    {
+                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                        if (producto != null)
+                        {
+                            producto.CantidadEnStock += detalle.Cantidad; // Sumar las nuevas cantidades
+                            await _productoManager.Actualizar(producto);
+                        }
+                    }
                 }
 
                 return Json(new { success = true, message = "Entrada guardada correctamente." });

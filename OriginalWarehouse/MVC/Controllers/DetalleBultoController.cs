@@ -78,15 +78,32 @@ namespace OriginalWarehouse.Web.MVC.Controllers
 
             if (ModelState.IsValid)
             {
-                if (detalle.Id == 0)
+                if (detalle.Id == 0) // 🔹 Nueva asignación de producto a bulto
                 {
                     await _detalleBultoManager.Crear(detalle);
+
+                    // 🔹 Obtener el producto asociado
+                    var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                    if (producto != null)
+                    {
+                        producto.CantidadEnStock += detalle.Cantidad; // Sumar cantidad al stock
+                        await _productoManager.Actualizar(producto);
+                    }
                 }
-                else
+                else // 🔹 Modificación de un detalle de bulto existente
                 {
                     var detalleExistente = await _detalleBultoManager.ObtenerPorId(detalle.Id);
                     if (detalleExistente == null) return NotFound();
 
+                    // 🔹 Obtener el producto asociado
+                    var producto = await _productoManager.ObtenerPorId(detalleExistente.ProductoId);
+                    if (producto != null)
+                    {
+                        // 🔹 Revertir la cantidad anterior antes de actualizar
+                        producto.CantidadEnStock -= detalleExistente.Cantidad;
+                    }
+
+                    // 🔹 Actualizar el detalle de bulto
                     detalleExistente.BultoId = detalle.BultoId;
                     detalleExistente.ProductoId = detalle.ProductoId;
                     detalleExistente.Cantidad = detalle.Cantidad;
@@ -94,6 +111,13 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                     detalleExistente.FechaDeCaducidad = detalle.FechaDeCaducidad;
 
                     await _detalleBultoManager.Actualizar(detalleExistente);
+
+                    // 🔹 Sumar la nueva cantidad al stock
+                    if (producto != null)
+                    {
+                        producto.CantidadEnStock += detalle.Cantidad;
+                        await _productoManager.Actualizar(producto);
+                    }
                 }
 
                 return Json(new { success = true, message = "Detalle de Bulto guardado correctamente." });
@@ -103,6 +127,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             var html = await RenderPartialViewToString("_EditCreatePartial", detalle);
             return Json(new { success = false, html });
         }
+
 
         [HttpPost]
         public async Task<IActionResult> Delete(int id)

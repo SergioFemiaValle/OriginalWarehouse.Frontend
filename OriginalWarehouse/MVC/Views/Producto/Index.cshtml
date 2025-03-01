@@ -84,6 +84,22 @@
     }
 </div>
 
+<!-- Modal -->
+<div id="editCreateModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <!-- Clase añadida -->
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar/Crear Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Aquí se cargará la vista parcial -->
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         function abrirModal(id) {
@@ -97,6 +113,31 @@
         function cerrarModal() {
             $('#editCreateModal').modal('hide');
         }
+
+        $(document).on("submit", "#editCreateForm", function (e) {
+            e.preventDefault();
+
+            const form = $(this);
+            const url = form.data("url");
+
+            $.ajax({
+                url: url,
+                method: "POST",
+                data: form.serialize(),
+                success: function (response) {
+                    if (response.success) {
+                        cerrarModal();
+                        alert(response.message);
+                        location.reload(); // Recargar la página para actualizar la tabla
+                    } else {
+                        $('#editCreateModal .modal-body').html(response.html);
+                    }
+                },
+                error: function () {
+                    alert("Ocurrió un error al procesar la solicitud.");
+                }
+            });
+        });
 
         function eliminarProducto(id) {
             if (confirm("¿Está seguro de eliminar este producto?")) {

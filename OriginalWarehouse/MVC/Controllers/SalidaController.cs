@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using OfficeOpenXml;
 using OriginalWarehouse.Application.Interfaces;
+using OriginalWarehouse.Application.Managers;
 using OriginalWarehouse.Domain.Entities;
 
 namespace OriginalWarehouse.Web.MVC.Controllers
@@ -15,6 +16,8 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         private readonly IBultoManager _bultoManager;
         private readonly UserManager<Usuario> _userManager; // Usamos Identity
         private readonly ICompositeViewEngine _viewEngine;
+        private readonly IDetalleBultoManager _detalleBultoManager;
+        private readonly IProductoManager _productoManager;
 
         public SalidaController(ISalidaManager salidaManager, IBultoManager bultoManager, UserManager<Usuario> userManager, ICompositeViewEngine viewEngine)
         {
@@ -79,17 +82,60 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 if (salida.Id == 0)
                 {
                     await _salidaManager.Crear(salida);
+
+                    // 🔹 Obtener los detalles de bulto asociados a la salida
+                    var detalles = (await _detalleBultoManager.ObtenerTodos())
+                        .Where(d => d.BultoId == salida.BultoId);
+
+                    foreach (var detalle in detalles)
+                    {
+                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                        if (producto != null)
+                        {
+                            producto.CantidadEnStock = Math.Max(0, producto.CantidadEnStock - detalle.Cantidad);
+                            await _productoManager.Actualizar(producto);
+                        }
+                    }
                 }
                 else
                 {
                     var salidaExistente = await _salidaManager.ObtenerPorId(salida.Id);
                     if (salidaExistente == null) return NotFound();
 
+                    // 🔹 Obtener los detalles anteriores de la salida antes de modificarla
+                    var detallesAnteriores = (await _detalleBultoManager.ObtenerTodos())
+                        .Where(d => d.BultoId == salidaExistente.BultoId);
+
+                    foreach (var detalle in detallesAnteriores)
+                    {
+                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                        if (producto != null)
+                        {
+                            producto.CantidadEnStock += detalle.Cantidad; // Revertir la cantidad anterior
+                            await _productoManager.Actualizar(producto);
+                        }
+                    }
+
+                    // 🔹 Actualizar la salida
                     salidaExistente.Fecha = salida.Fecha;
                     salidaExistente.UsuarioId = salida.UsuarioId;
                     salidaExistente.BultoId = salida.BultoId;
 
                     await _salidaManager.Actualizar(salidaExistente);
+
+                    // 🔹 Obtener los nuevos detalles después de la actualización
+                    var detallesNuevos = (await _detalleBultoManager.ObtenerTodos())
+                        .Where(d => d.BultoId == salida.BultoId);
+
+                    foreach (var detalle in detallesNuevos)
+                    {
+                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                        if (producto != null)
+                        {
+                            producto.CantidadEnStock = Math.Max(0, producto.CantidadEnStock - detalle.Cantidad);
+                            await _productoManager.Actualizar(producto);
+                        }
+                    }
                 }
 
                 return Json(new { success = true, message = "Salida guardada correctamente." });
@@ -99,6 +145,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             var html = await RenderPartialViewToString("_EditCreatePartial", salida);
             return Json(new { success = false, html });
         }
+
 
         [HttpPost]
         public async Task<IActionResult> Delete(int id)
