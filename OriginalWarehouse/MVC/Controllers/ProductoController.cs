@@ -14,14 +14,17 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         private readonly ICategoriaProductoManager _categoriaProductoManager;
         private readonly IAlmacenamientoEspecialManager _almacenamientoEspecialManager;
         private readonly ICompositeViewEngine _viewEngine;
+        private readonly IDetalleBultoManager _detallesBultoManager;
 
         public ProductoController(IProductoManager productoManager, ICategoriaProductoManager categoriaProductoManager,
-            IAlmacenamientoEspecialManager almacenamientoEspecialManager, ICompositeViewEngine viewEngine)
+            IAlmacenamientoEspecialManager almacenamientoEspecialManager, 
+            ICompositeViewEngine viewEngine, IDetalleBultoManager detallesBultoManager)
         {
             _productoManager = productoManager;
             _categoriaProductoManager = categoriaProductoManager;
             _almacenamientoEspecialManager = almacenamientoEspecialManager;
             _viewEngine = viewEngine;
+            _detallesBultoManager = detallesBultoManager;
         }
 
         #region public methods
@@ -114,6 +117,12 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 if (producto == null)
                 {
                     return NotFound();
+                }
+
+                var detalles = (await _detallesBultoManager.ObtenerTodos()).Where(d => d.ProductoId == id);
+                if (detalles.Any())
+                {
+                    return Json(new { success = false, message = "No se puede eliminar el producto porque está asociado a un Detalle de un Bulto." });
                 }
 
                 await _productoManager.Eliminar(id);

@@ -79,11 +79,9 @@ namespace OriginalWarehouse.Web.MVC.Controllers
 
             if (ModelState.IsValid)
             {
-                if (salida.Id == 0)
+                if (salida.Id == 0) // Nueva salida
                 {
-                    await _salidaManager.Crear(salida);
-
-                    // 🔹 Obtener los detalles de bulto asociados a la salida
+                    // Obtener los detalles del bulto asociado a la salida
                     var detalles = (await _detalleBultoManager.ObtenerTodos())
                         .Where(d => d.BultoId == salida.BultoId);
 
@@ -92,47 +90,78 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                         var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
                         if (producto != null)
                         {
-                            producto.CantidadEnStock = Math.Max(0, producto.CantidadEnStock - detalle.Cantidad);
+                            // ❌ Verificar si hay suficiente stock antes de restarlo
+                            if (producto.CantidadEnStock < detalle.Cantidad)
+                            {
+                                return Json(new { success = false, message = $"No hay suficiente stock para el producto {producto.Nombre}. Salida cancelada." });
+                            }
+                        }
+                    }
+
+                    // Si hay suficiente stock, registrar la salida y actualizar stock
+                    await _salidaManager.Crear(salida);
+
+                    foreach (var detalle in detalles)
+                    {
+                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                        if (producto != null)
+                        {
+                            producto.CantidadEnStock -= detalle.Cantidad;
                             await _productoManager.Actualizar(producto);
                         }
                     }
                 }
-                else
+                else // Actualización de una salida existente
                 {
                     var salidaExistente = await _salidaManager.ObtenerPorId(salida.Id);
                     if (salidaExistente == null) return NotFound();
 
-                    // 🔹 Obtener los detalles anteriores de la salida antes de modificarla
+                    // Obtener los detalles anteriores de la salida antes de modificarla
                     var detallesAnteriores = (await _detalleBultoManager.ObtenerTodos())
                         .Where(d => d.BultoId == salidaExistente.BultoId);
 
+                    // Devolver los productos al stock antes de actualizar
                     foreach (var detalle in detallesAnteriores)
                     {
                         var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
                         if (producto != null)
                         {
-                            producto.CantidadEnStock += detalle.Cantidad; // Revertir la cantidad anterior
+                            producto.CantidadEnStock += detalle.Cantidad;
                             await _productoManager.Actualizar(producto);
                         }
                     }
 
-                    // 🔹 Actualizar la salida
+                    // Actualizar la salida
                     salidaExistente.Fecha = salida.Fecha;
                     salidaExistente.UsuarioId = salida.UsuarioId;
                     salidaExistente.BultoId = salida.BultoId;
 
                     await _salidaManager.Actualizar(salidaExistente);
 
-                    // 🔹 Obtener los nuevos detalles después de la actualización
+                    // Obtener los nuevos detalles después de la actualización
                     var detallesNuevos = (await _detalleBultoManager.ObtenerTodos())
                         .Where(d => d.BultoId == salida.BultoId);
 
+                    // Verificar que haya suficiente stock antes de procesar la nueva salida
                     foreach (var detalle in detallesNuevos)
                     {
                         var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
                         if (producto != null)
                         {
-                            producto.CantidadEnStock = Math.Max(0, producto.CantidadEnStock - detalle.Cantidad);
+                            if (producto.CantidadEnStock < detalle.Cantidad)
+                            {
+                                return Json(new { success = false, message = $"No hay suficiente stock para el producto {producto.Nombre}. Actualización cancelada." });
+                            }
+                        }
+                    }
+
+                    // Si hay suficiente stock, procesar la nueva salida
+                    foreach (var detalle in detallesNuevos)
+                    {
+                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                        if (producto != null)
+                        {
+                            producto.CantidadEnStock -= detalle.Cantidad;
                             await _productoManager.Actualizar(producto);
                         }
                     }
@@ -145,6 +174,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             var html = await RenderPartialViewToString("_EditCreatePartial", salida);
             return Json(new { success = false, html });
         }
+
 
 
         [HttpPost]

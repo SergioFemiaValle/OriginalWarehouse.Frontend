@@ -102,6 +102,13 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 if (movimiento.Id == 0)
                 {
                     await _movimientoManager.Crear(movimiento);
+
+                    var bulto = await _bultoManager.ObtenerPorId(movimiento.BultoId);
+                    if (bulto != null)
+                    {
+                        bulto.UbicacionActual = movimiento.UbicacionDestino; // Actualizar la ubicación del bulto
+                        await _bultoManager.Actualizar(bulto);
+                    }
                 }
                 else
                 {
@@ -115,6 +122,13 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                     movimientoExistente.UbicacionDestino = movimiento.UbicacionDestino;
 
                     await _movimientoManager.Actualizar(movimientoExistente);
+
+                    var bulto = await _bultoManager.ObtenerPorId(movimiento.BultoId);
+                    if (bulto != null && bulto.UbicacionActual != movimiento.UbicacionDestino)
+                    {
+                        bulto.UbicacionActual = movimiento.UbicacionDestino;
+                        await _bultoManager.Actualizar(bulto);
+                    }
                 }
 
                 return Json(new { success = true, message = "Movimiento guardado correctamente." });

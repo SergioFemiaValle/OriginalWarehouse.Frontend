@@ -144,9 +144,13 @@
                 $.ajax({
                     url: `/Producto/Delete/${id}`,
                     type: "POST",
-                    success: function () {
-                        alert("Producto eliminado correctamente.");
-                        location.reload();
+                    success: function (response) {
+                        if (response.success) {
+                            alert("Producto eliminado correctamente.");
+                            location.reload();
+                        } else {
+                            alert(response.message); // Mostrar mensaje si el producto no se puede eliminar
+                        }
                     },
                     error: function () {
                         alert("Ocurrió un error al intentar eliminar el producto.");
