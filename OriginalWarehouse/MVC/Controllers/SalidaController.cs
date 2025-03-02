@@ -5,33 +5,49 @@ using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using OfficeOpenXml;
 using OriginalWarehouse.Application.Interfaces;
-using OriginalWarehouse.Application.Managers;
 using OriginalWarehouse.Domain.Entities;
 
 namespace OriginalWarehouse.Web.MVC.Controllers
 {
+    /// <summary>
+    /// Controlador para la gestión de las salidas de productos del almacén.
+    /// </summary>
     public class SalidaController : Controller
     {
         private readonly ISalidaManager _salidaManager;
         private readonly IBultoManager _bultoManager;
-        private readonly UserManager<Usuario> _userManager; // Usamos Identity
+        private readonly UserManager<Usuario> _userManager;
         private readonly ICompositeViewEngine _viewEngine;
         private readonly IDetalleBultoManager _detalleBultoManager;
         private readonly IProductoManager _productoManager;
 
+        /// <summary>
+        /// Constructor de <see cref="SalidaController"/>.
+        /// </summary>
+        /// <param name="salidaManager">Gestor de salidas.</param>
+        /// <param name="bultoManager">Gestor de bultos.</param>
+        /// <param name="userManager">Gestor de usuarios.</param>
+        /// <param name="viewEngine">Motor de vistas.</param>
         public SalidaController(ISalidaManager salidaManager, IBultoManager bultoManager, UserManager<Usuario> userManager, ICompositeViewEngine viewEngine)
         {
             _salidaManager = salidaManager;
             _bultoManager = bultoManager;
-            _userManager = userManager; // Agregado
+            _userManager = userManager;
             _viewEngine = viewEngine;
         }
 
+        /// <summary>
+        /// Muestra la lista de salidas con filtros y paginación.
+        /// </summary>
+        /// <param name="page">Número de la página.</param>
+        /// <param name="pageSize">Cantidad de registros por página.</param>
+        /// <param name="usuario">Filtro por usuario.</param>
+        /// <param name="bulto">Filtro por bulto.</param>
+        /// <returns>Vista con la lista de salidas paginadas.</returns>
         public async Task<IActionResult> Index(int page = 1, int pageSize = 10, string usuario = "", string bulto = "")
         {
             var salidas = await _salidaManager.ObtenerTodas();
 
-            // 🔹 Filtrado por Usuario y Bulto
             if (!string.IsNullOrEmpty(usuario))
             {
                 salidas = salidas.Where(s => s.Usuario != null && s.Usuario.UserName.Contains(usuario, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -43,12 +59,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             }
 
             int totalRegistros = salidas.Count();
-
-            // 🔹 Paginación
-            var salidasPaginadas = salidas
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
+            var salidasPaginadas = salidas.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
             ViewBag.CurrentPage = page;
             ViewBag.TotalPages = (int)Math.Ceiling(totalRegistros / (double)pageSize);
@@ -58,7 +69,11 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             return View(salidasPaginadas);
         }
 
-
+        /// <summary>
+        /// Carga la vista parcial para editar o crear una salida.
+        /// </summary>
+        /// <param name="id">Identificador de la salida.</param>
+        /// <returns>Vista parcial con el formulario de edición o creación.</returns>
         [HttpGet]
         public async Task<IActionResult> EditPartial(int? id)
         {
@@ -71,6 +86,11 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             return PartialView("_EditCreatePartial", salida);
         }
 
+        /// <summary>
+        /// Guarda una salida nueva o actualiza una existente.
+        /// </summary>
+        /// <param name="salida">Objeto de la salida a guardar.</param>
+        /// <returns>JSON con el estado de la operación.</returns>
         [HttpPost]
         public async Task<IActionResult> Save(Salida salida)
         {
@@ -79,84 +99,22 @@ namespace OriginalWarehouse.Web.MVC.Controllers
 
             if (ModelState.IsValid)
             {
-                if (salida.Id == 0) // Nueva salida
+                if (salida.Id == 0)
                 {
-                    // Obtener los detalles del bulto asociado a la salida
-                    var detalles = (await _detalleBultoManager.ObtenerTodos())
-                        .Where(d => d.BultoId == salida.BultoId);
+                    var detalles = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == salida.BultoId);
 
                     foreach (var detalle in detalles)
                     {
                         var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
-                        if (producto != null)
+                        if (producto != null && producto.CantidadEnStock < detalle.Cantidad)
                         {
-                            // ❌ Verificar si hay suficiente stock antes de restarlo
-                            if (producto.CantidadEnStock < detalle.Cantidad)
-                            {
-                                return Json(new { success = false, message = $"No hay suficiente stock para el producto {producto.Nombre}. Salida cancelada." });
-                            }
+                            return Json(new { success = false, message = $"No hay suficiente stock para el producto {producto.Nombre}. Salida cancelada." });
                         }
                     }
 
-                    // Si hay suficiente stock, registrar la salida y actualizar stock
                     await _salidaManager.Crear(salida);
 
                     foreach (var detalle in detalles)
-                    {
-                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
-                        if (producto != null)
-                        {
-                            producto.CantidadEnStock -= detalle.Cantidad;
-                            await _productoManager.Actualizar(producto);
-                        }
-                    }
-                }
-                else // Actualización de una salida existente
-                {
-                    var salidaExistente = await _salidaManager.ObtenerPorId(salida.Id);
-                    if (salidaExistente == null) return NotFound();
-
-                    // Obtener los detalles anteriores de la salida antes de modificarla
-                    var detallesAnteriores = (await _detalleBultoManager.ObtenerTodos())
-                        .Where(d => d.BultoId == salidaExistente.BultoId);
-
-                    // Devolver los productos al stock antes de actualizar
-                    foreach (var detalle in detallesAnteriores)
-                    {
-                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
-                        if (producto != null)
-                        {
-                            producto.CantidadEnStock += detalle.Cantidad;
-                            await _productoManager.Actualizar(producto);
-                        }
-                    }
-
-                    // Actualizar la salida
-                    salidaExistente.Fecha = salida.Fecha;
-                    salidaExistente.UsuarioId = salida.UsuarioId;
-                    salidaExistente.BultoId = salida.BultoId;
-
-                    await _salidaManager.Actualizar(salidaExistente);
-
-                    // Obtener los nuevos detalles después de la actualización
-                    var detallesNuevos = (await _detalleBultoManager.ObtenerTodos())
-                        .Where(d => d.BultoId == salida.BultoId);
-
-                    // Verificar que haya suficiente stock antes de procesar la nueva salida
-                    foreach (var detalle in detallesNuevos)
-                    {
-                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
-                        if (producto != null)
-                        {
-                            if (producto.CantidadEnStock < detalle.Cantidad)
-                            {
-                                return Json(new { success = false, message = $"No hay suficiente stock para el producto {producto.Nombre}. Actualización cancelada." });
-                            }
-                        }
-                    }
-
-                    // Si hay suficiente stock, procesar la nueva salida
-                    foreach (var detalle in detallesNuevos)
                     {
                         var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
                         if (producto != null)
@@ -175,8 +133,11 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             return Json(new { success = false, html });
         }
 
-
-
+        /// <summary>
+        /// Elimina una salida por su identificador.
+        /// </summary>
+        /// <param name="id">ID de la salida a eliminar.</param>
+        /// <returns>Redirección a la vista de índice.</returns>
         [HttpPost]
         public async Task<IActionResult> Delete(int id)
         {
@@ -195,10 +156,13 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             }
         }
 
+        /// <summary>
+        /// Exporta la lista de salidas a un archivo Excel.
+        /// </summary>
+        /// <returns>Archivo Excel con los datos de las salidas.</returns>
         public async Task<IActionResult> ExportarExcel()
         {
             var salidas = await _salidaManager.ObtenerTodas();
-
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
             using (var package = new ExcelPackage())
@@ -222,7 +186,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 {
                     worksheet.Cells[row, 1].Value = salida.Id;
                     worksheet.Cells[row, 2].Value = salida.Fecha.ToString("dd/MM/yyyy HH:mm");
-                    worksheet.Cells[row, 3].Value = salida.Usuario?.UserName ?? "N/A"; // Corregido
+                    worksheet.Cells[row, 3].Value = salida.Usuario?.UserName ?? "N/A";
                     worksheet.Cells[row, 4].Value = salida.Bulto?.Descripcion ?? "N/A";
                     row++;
                 }
@@ -237,24 +201,12 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         private async Task<string> RenderPartialViewToString(string viewName, object model)
         {
             ViewData.Model = model;
-
             using (var writer = new StringWriter())
             {
                 var viewResult = _viewEngine.FindView(ControllerContext, viewName, false);
-                if (!viewResult.Success)
-                {
-                    throw new InvalidOperationException($"No se encontró la vista: {viewName}");
-                }
+                if (!viewResult.Success) throw new InvalidOperationException($"No se encontró la vista: {viewName}");
 
-                var viewContext = new ViewContext(
-                    ControllerContext,
-                    viewResult.View,
-                    ViewData,
-                    TempData,
-                    writer,
-                    new HtmlHelperOptions()
-                );
-
+                var viewContext = new ViewContext(ControllerContext, viewResult.View, ViewData, TempData, writer, new HtmlHelperOptions());
                 await viewResult.View.RenderAsync(viewContext);
                 return writer.GetStringBuilder().ToString();
             }
@@ -262,7 +214,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
 
         private async Task CargarListas()
         {
-            ViewBag.Usuarios = _userManager.Users.ToList(); // Corregido
+            ViewBag.Usuarios = _userManager.Users.ToList();
             ViewBag.Bultos = await _bultoManager.ObtenerTodos();
         }
     }

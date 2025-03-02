@@ -8,6 +8,10 @@ using OriginalWarehouse.Domain.Entities;
 
 namespace OriginalWarehouse.Web.MVC.Controllers
 {
+    /// <summary>
+    /// Controlador para la gestión de detalles de bultos en el almacén.
+    /// Permite listar, crear, editar, eliminar y exportar detalles de bultos en formato Excel.
+    /// </summary>
     public class DetalleBultoController : Controller
     {
         private readonly IDetalleBultoManager _detalleBultoManager;
@@ -15,6 +19,9 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         private readonly IBultoManager _bultoManager;
         private readonly ICompositeViewEngine _viewEngine;
 
+        /// <summary>
+        /// Constructor del controlador de detalles de bultos.
+        /// </summary>
         public DetalleBultoController(IDetalleBultoManager detalleBultoManager, IProductoManager productoManager,
                                       IBultoManager bultoManager, ICompositeViewEngine viewEngine)
         {
@@ -24,30 +31,27 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             _viewEngine = viewEngine;
         }
 
-        #region public methos
+        #region public methods
+
+        /// <summary>
+        /// Muestra la lista de detalles de bultos con filtros y paginación.
+        /// </summary>
         public async Task<IActionResult> Index(int page = 1, int pageSize = 20, string nombre = "", string lote = "")
         {
             var detalles = await _detalleBultoManager.ObtenerTodos();
 
-            // 🔹 Filtrado por Nombre de Producto
             if (!string.IsNullOrEmpty(nombre))
             {
                 detalles = detalles.Where(d => d.Producto != null && d.Producto.Nombre.Contains(nombre, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
-            // 🔹 Filtrado por Lote
             if (!string.IsNullOrEmpty(lote))
             {
                 detalles = detalles.Where(d => !string.IsNullOrEmpty(d.Lote) && d.Lote.Contains(lote, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
             int totalRegistros = detalles.Count();
-
-            // 🔹 Paginación
-            var detallesPaginados = detalles
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
+            var detallesPaginados = detalles.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
             ViewBag.CurrentPage = page;
             ViewBag.TotalPages = (int)Math.Ceiling(totalRegistros / (double)pageSize);
@@ -57,7 +61,9 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             return View(detallesPaginados);
         }
 
-
+        /// <summary>
+        /// Muestra la vista parcial para la creación o edición de un detalle de bulto.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> EditPartial(int? id)
         {
@@ -70,6 +76,9 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             return PartialView("_EditCreatePartial", detalle);
         }
 
+        /// <summary>
+        /// Guarda un nuevo detalle de bulto o actualiza uno existente.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Save(DetalleBulto detalle)
         {
@@ -104,7 +113,9 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             return Json(new { success = false, html });
         }
 
-
+        /// <summary>
+        /// Elimina un detalle de bulto si no tiene dependencias.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Delete(int id)
         {
@@ -123,6 +134,9 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             }
         }
 
+        /// <summary>
+        /// Exporta la lista de detalles de bultos a un archivo de Excel.
+        /// </summary>
         public async Task<IActionResult> ExportarExcel()
         {
             var detallesBulto = await _detalleBultoManager.ObtenerTodos();
@@ -133,21 +147,12 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             {
                 var worksheet = package.Workbook.Worksheets.Add("Detalles de Bulto");
 
-                // 📌 Encabezados personalizados
                 worksheet.Cells[1, 1].Value = "ID";
                 worksheet.Cells[1, 2].Value = "Bulto";
                 worksheet.Cells[1, 3].Value = "Producto";
                 worksheet.Cells[1, 4].Value = "Cantidad";
                 worksheet.Cells[1, 5].Value = "Lote";
                 worksheet.Cells[1, 6].Value = "Fecha de Caducidad";
-
-                // 📌 Aplicar estilos a los encabezados
-                using (var headerRange = worksheet.Cells["A1:F1"])
-                {
-                    headerRange.Style.Font.Bold = true;
-                    headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                    headerRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightYellow);
-                }
 
                 int row = 2;
                 foreach (var detalle in detallesBulto)
@@ -167,8 +172,14 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 return File(fileContent, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "DetallesBulto.xlsx");
             }
         }
+
         #endregion
+
         #region private methods
+
+        /// <summary>
+        /// Renderiza una vista parcial como una cadena de texto HTML.
+        /// </summary>
         private async Task<string> RenderPartialViewToString(string viewName, object model)
         {
             ViewData.Model = model;
@@ -195,11 +206,15 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             }
         }
 
+        /// <summary>
+        /// Carga las listas de productos y bultos para la vista.
+        /// </summary>
         private async Task CargarListas()
         {
             ViewBag.Productos = await _productoManager.ObtenerTodos();
             ViewBag.Bultos = await _bultoManager.ObtenerTodos();
         }
+
         #endregion
     }
 }

@@ -7,17 +7,32 @@ using OriginalWarehouse.Domain.Entities;
 
 namespace OriginalWarehouse.Web.MVC.Controllers
 {
+    /// <summary>
+    /// Controlador para la gestión de categorías de productos.
+    /// Permite listar, crear, editar y eliminar categorías.
+    /// </summary>
     public class CategoriaProductoController : Controller
     {
         private readonly ICategoriaProductoManager _categoriaProductoManager;
         private readonly ICompositeViewEngine _viewEngine;
 
+        /// <summary>
+        /// Constructor del controlador de categorías de productos.
+        /// </summary>
+        /// <param name="categoriaProductoManager">Gestor de categorías de productos.</param>
+        /// <param name="viewEngine">Motor de renderizado de vistas parciales.</param>
         public CategoriaProductoController(ICategoriaProductoManager categoriaProductoManager, ICompositeViewEngine viewEngine)
         {
             _categoriaProductoManager = categoriaProductoManager;
             _viewEngine = viewEngine;
         }
 
+        /// <summary>
+        /// Muestra la lista de categorías de productos con paginación.
+        /// </summary>
+        /// <param name="page">Número de página actual.</param>
+        /// <param name="pageSize">Cantidad de registros por página.</param>
+        /// <returns>Vista con la lista de categorías paginadas.</returns>
         public async Task<IActionResult> IndexAsync(int page = 1, int pageSize = 10)
         {
             var categorias = await _categoriaProductoManager.ObtenerTodas();
@@ -36,6 +51,11 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             return View(categoriasPaginadas);
         }
 
+        /// <summary>
+        /// Muestra la vista parcial para la creación o edición de una categoría de producto.
+        /// </summary>
+        /// <param name="id">ID de la categoría (opcional).</param>
+        /// <returns>Vista parcial con el formulario de edición o creación.</returns>
         [HttpGet]
         public IActionResult EditPartial(int? id)
         {
@@ -46,6 +66,11 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             return PartialView("_EditCreatePartial", categoria);
         }
 
+        /// <summary>
+        /// Guarda una nueva categoría de producto o actualiza una existente.
+        /// </summary>
+        /// <param name="categoria">Objeto de categoría de producto a guardar.</param>
+        /// <returns>Json con el resultado de la operación.</returns>
         [HttpPost]
         public async Task<IActionResult> Save(CategoriaProducto categoria)
         {
@@ -74,6 +99,11 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             return Json(new { success = false, html });
         }
 
+        /// <summary>
+        /// Elimina una categoría de producto si no tiene dependencias.
+        /// </summary>
+        /// <param name="id">ID de la categoría a eliminar.</param>
+        /// <returns>Redirección a la vista de índice.</returns>
         [HttpPost]
         public async Task<IActionResult> Delete(int id)
         {
@@ -94,6 +124,12 @@ namespace OriginalWarehouse.Web.MVC.Controllers
 
         #region private methods
 
+        /// <summary>
+        /// Renderiza una vista parcial como una cadena de texto HTML.
+        /// </summary>
+        /// <param name="viewName">Nombre de la vista parcial.</param>
+        /// <param name="model">Modelo a enviar a la vista.</param>
+        /// <returns>Cadena con el contenido HTML de la vista.</returns>
         private async Task<string> RenderPartialViewToString(string viewName, object model)
         {
             ViewData.Model = model;

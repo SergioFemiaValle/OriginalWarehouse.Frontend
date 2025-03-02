@@ -8,6 +8,10 @@ using OriginalWarehouse.Domain.Entities;
 
 namespace OriginalWarehouse.Web.MVC.Controllers
 {
+    /// <summary>
+    /// Controlador para la gestión de productos.
+    /// Permite listar, filtrar, crear, editar, eliminar y exportar productos en formato Excel.
+    /// </summary>
     public class ProductoController : Controller
     {
         private readonly IProductoManager _productoManager;
@@ -16,8 +20,11 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         private readonly ICompositeViewEngine _viewEngine;
         private readonly IDetalleBultoManager _detallesBultoManager;
 
+        /// <summary>
+        /// Constructor del controlador de productos.
+        /// </summary>
         public ProductoController(IProductoManager productoManager, ICategoriaProductoManager categoriaProductoManager,
-            IAlmacenamientoEspecialManager almacenamientoEspecialManager, 
+            IAlmacenamientoEspecialManager almacenamientoEspecialManager,
             ICompositeViewEngine viewEngine, IDetalleBultoManager detallesBultoManager)
         {
             _productoManager = productoManager;
@@ -27,38 +34,37 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             _detallesBultoManager = detallesBultoManager;
         }
 
-        #region public methods
+        /// <summary>
+        /// Muestra la lista de productos con filtros y paginación.
+        /// </summary>
         public async Task<IActionResult> IndexAsync(string searchNombre, string searchCategoria, int page = 1, int pageSize = 10)
         {
             var productos = await _productoManager.ObtenerTodos();
 
-            // 🔹 Aplicar filtros de búsqueda
             if (!string.IsNullOrEmpty(searchNombre))
             {
                 productos = productos.Where(p => p.Nombre.Contains(searchNombre, StringComparison.OrdinalIgnoreCase)).ToList();
             }
+
             if (!string.IsNullOrEmpty(searchCategoria))
             {
                 productos = productos.Where(p => p.Categoria?.Nombre == searchCategoria).ToList();
             }
 
             int totalRegistros = productos.Count();
-
-            // 🔹 Paginación
-            var productosPaginados = productos
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
+            var productosPaginados = productos.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
             ViewBag.CurrentPage = page;
             ViewBag.TotalPages = (int)Math.Ceiling(totalRegistros / (double)pageSize);
-            ViewBag.SearchNombre = searchNombre; // Mantener valores en los inputs
+            ViewBag.SearchNombre = searchNombre;
             ViewBag.SearchCategoria = searchCategoria;
 
             return View(productosPaginados);
         }
 
-
+        /// <summary>
+        /// Muestra la vista parcial para la creación o edición de un producto.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> EditPartial(int? id)
         {
@@ -71,6 +77,9 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             return PartialView("_EditCreatePartial", producto);
         }
 
+        /// <summary>
+        /// Guarda un nuevo producto o actualiza uno existente.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Save(Producto producto)
         {
@@ -87,10 +96,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 else
                 {
                     var productoExistente = await _productoManager.ObtenerPorId(producto.Id);
-                    if (productoExistente == null)
-                    {
-                        return NotFound();
-                    }
+                    if (productoExistente == null) return NotFound();
 
                     productoExistente.Nombre = producto.Nombre;
                     productoExistente.Precio = producto.Precio;
@@ -108,16 +114,16 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             return Json(new { success = false, html });
         }
 
+        /// <summary>
+        /// Elimina un producto si no está relacionado con un bulto.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Delete(int id)
         {
             try
             {
                 var producto = await _productoManager.ObtenerPorId(id);
-                if (producto == null)
-                {
-                    return NotFound();
-                }
+                if (producto == null) return NotFound();
 
                 var detalles = (await _detallesBultoManager.ObtenerTodos()).Where(d => d.ProductoId == id);
                 if (detalles.Any())
@@ -135,17 +141,19 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             }
         }
 
+        /// <summary>
+        /// Exporta la lista de productos a un archivo de Excel.
+        /// </summary>
         public async Task<IActionResult> ExportarExcel()
         {
             var productos = await _productoManager.ObtenerTodos();
 
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial; // Activar modo gratuito
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
             using (var package = new ExcelPackage())
             {
                 var worksheet = package.Workbook.Worksheets.Add("Productos");
 
-                // 📌 Personalizar encabezados (primera fila)
                 worksheet.Cells[1, 1].Value = "ID";
                 worksheet.Cells[1, 2].Value = "Nombre";
                 worksheet.Cells[1, 3].Value = "Categoría";
@@ -153,16 +161,14 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 worksheet.Cells[1, 5].Value = "Cantidad en Stock";
                 worksheet.Cells[1, 6].Value = "Almacenamiento Especial";
 
-                // 📌 Aplicar estilos a los encabezados
                 using (var headerRange = worksheet.Cells["A1:F1"])
                 {
-                    headerRange.Style.Font.Bold = true; // Negrita
+                    headerRange.Style.Font.Bold = true;
                     headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
                     headerRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
                 }
 
-                int row = 2; // 📌 Iniciar desde la fila 2 (la fila 1 es de encabezados)
-
+                int row = 2;
                 foreach (var producto in productos)
                 {
                     worksheet.Cells[row, 1].Value = producto.Id;
@@ -174,24 +180,27 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                     row++;
                 }
 
-                // 📌 Ajustar automáticamente el tamaño de las columnas
                 worksheet.Cells.AutoFitColumns();
-
                 var fileContent = package.GetAsByteArray();
                 return File(fileContent, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Productos.xlsx");
             }
         }
 
-        #endregion
 
         #region private methods
 
+        /// <summary>
+        /// Carga las listas necesarias para la vista de edición/creación.
+        /// </summary>
         private async Task CargarListas()
         {
             ViewBag.Categorias = await _categoriaProductoManager.ObtenerTodas();
             ViewBag.AlmacenamientosEspeciales = await _almacenamientoEspecialManager.ObtenerTodos();
         }
 
+        /// <summary>
+        /// Renderiza una vista parcial como string.
+        /// </summary>
         private async Task<string> RenderPartialViewToString(string viewName, object model)
         {
             ViewData.Model = model;

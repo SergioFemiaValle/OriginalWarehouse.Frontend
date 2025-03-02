@@ -2,29 +2,45 @@
 using Microsoft.AspNetCore.Mvc;
 using OriginalWarehouse.Domain.Entities;
 using OriginalWarehouse.MVC.Models;
-using System.Threading.Tasks;
 
 namespace OriginalWarehouse.Web.MVC.Controllers
 {
+    /// <summary>
+    /// Controlador de autenticación de usuarios.
+    /// Maneja el inicio de sesión, registro y cierre de sesión.
+    /// </summary>
     public class AuthController : Controller
     {
         private readonly UserManager<Usuario> _userManager;
         private readonly SignInManager<Usuario> _signInManager;
 
+        /// <summary>
+        /// Constructor del controlador de autenticación.
+        /// </summary>
+        /// <param name="userManager">Gestor de usuarios de Identity.</param>
+        /// <param name="signInManager">Gestor de inicio de sesión de Identity.</param>
         public AuthController(UserManager<Usuario> userManager, SignInManager<Usuario> signInManager)
         {
             _userManager = userManager;
             _signInManager = signInManager;
         }
 
-        // Vista de Login
+        /// <summary>
+        /// Muestra la vista de inicio de sesión.
+        /// </summary>
+        /// <returns>Vista de login.</returns>
         [HttpGet]
         public IActionResult Login()
         {
             return View();
         }
 
-        // Procesar el Login
+        /// <summary>
+        /// Procesa el inicio de sesión del usuario.
+        /// </summary>
+        /// <param name="model">Modelo con los datos de inicio de sesión.</param>
+        /// <returns>Redirige a la página principal si el inicio de sesión es exitoso, 
+        /// o muestra un mensaje de error si falla.</returns>
         [HttpPost]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
@@ -40,14 +56,22 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             return View(model);
         }
 
-        // Vista de Registro
+        /// <summary>
+        /// Muestra la vista de registro de usuario.
+        /// </summary>
+        /// <returns>Vista de registro.</returns>
         [HttpGet]
         public IActionResult Register()
         {
             return View();
         }
 
-        // Procesar el Registro
+        /// <summary>
+        /// Procesa el registro de un nuevo usuario.
+        /// </summary>
+        /// <param name="model">Modelo con los datos del nuevo usuario.</param>
+        /// <returns>Redirige a la página principal si el registro es exitoso, 
+        /// o muestra un mensaje de error si falla.</returns>
         [HttpPost]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
@@ -69,7 +93,10 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             return View(model);
         }
 
-        // Cerrar Sesión
+        /// <summary>
+        /// Cierra la sesión del usuario actual y redirige a la vista de login.
+        /// </summary>
+        /// <returns>Redirección a la vista de inicio de sesión.</returns>
         [HttpPost]
         public async Task<IActionResult> Logout()
         {
