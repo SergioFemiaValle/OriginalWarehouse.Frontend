@@ -16,7 +16,7 @@
             @foreach (var usuario in (IEnumerable<dynamic>)ViewBag.Usuarios)
             {
                 <option value="@usuario.Id" @(usuario.Id == Model.UsuarioId ? "selected" : "")>
-                    @usuario.Nombre
+                    @usuario.UserName
                 </option>
             }
         </select>

@@ -33,7 +33,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         /// <param name="page">Número de página actual.</param>
         /// <param name="pageSize">Cantidad de registros por página.</param>
         /// <returns>Vista con los tipos de almacenamiento especial paginados.</returns>
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 20)
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
         {
             var almacenamientos = await _almacenamientoEspecialManager.ObtenerTodos();
             int totalRegistros = almacenamientos.Count();

@@ -33,13 +33,13 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         /// <param name="page">Número de página actual.</param>
         /// <param name="pageSize">Cantidad de registros por página.</param>
         /// <returns>Vista con la lista de estados de bultos paginados.</returns>
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 20)
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
         {
             var estados = await _estadoBultoManager.ObtenerTodos();
 
             int totalRegistros = estados.Count();
 
-            // 🔹 Paginación
+            // Paginación
             var estadosPaginados = estados
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)

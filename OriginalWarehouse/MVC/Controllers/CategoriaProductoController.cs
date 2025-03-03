@@ -39,7 +39,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
 
             int totalRegistros = categorias.Count();
 
-            // 🔹 Paginación
+            // Paginación
             var categoriasPaginadas = categorias
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)

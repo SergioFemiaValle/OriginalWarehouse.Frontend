@@ -28,12 +28,16 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         /// <param name="bultoManager">Gestor de bultos.</param>
         /// <param name="userManager">Gestor de usuarios.</param>
         /// <param name="viewEngine">Motor de vistas.</param>
-        public SalidaController(ISalidaManager salidaManager, IBultoManager bultoManager, UserManager<Usuario> userManager, ICompositeViewEngine viewEngine)
+        public SalidaController(ISalidaManager salidaManager, IBultoManager bultoManager, 
+            UserManager<Usuario> userManager, ICompositeViewEngine viewEngine,
+            IDetalleBultoManager detalleBultoManager, IProductoManager productoManager)
         {
             _salidaManager = salidaManager;
             _bultoManager = bultoManager;
             _userManager = userManager;
             _viewEngine = viewEngine;
+            _detalleBultoManager = detalleBultoManager;
+            _productoManager = productoManager;
         }
 
         /// <summary>
@@ -99,22 +103,83 @@ namespace OriginalWarehouse.Web.MVC.Controllers
 
             if (ModelState.IsValid)
             {
-                if (salida.Id == 0)
+                // Verificar si el bulto ya tiene una salida asociada
+                var salidaExistentePorBulto = (await _salidaManager.ObtenerTodas()).Where(e => e.BultoId == salida.BultoId);
+                if (salida.Id == 0 && salidaExistentePorBulto != null)
                 {
-                    var detalles = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == salida.BultoId);
+                    return Json(new { success = false, message = "Este bulto ya tiene una salida registrada." });
+                }
 
-                    foreach (var detalle in detalles)
+                if (salida.Id == 0) // Nueva salida
+                {
+                    var bulto = await _bultoManager.ObtenerPorId(salida.BultoId);
+                    if (bulto != null)
+                    {
+                        // Obtener los productos en DetalleBulto
+                        var detalles = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == salida.BultoId);
+
+                        // Verificar si hay suficiente stock antes de realizar la salida
+                        foreach (var detalle in detalles)
+                        {
+                            var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                            if (producto != null && producto.CantidadEnStock < detalle.Cantidad)
+                            {
+                                return Json(new { success = false, message = $"No hay suficiente stock para el producto {producto.Nombre}. Salida cancelada." });
+                            }
+                        }
+
+                        // Registrar la salida y actualizar stock
+                        await _salidaManager.Crear(salida);
+                        foreach (var detalle in detalles)
+                        {
+                            var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                            if (producto != null)
+                            {
+                                producto.CantidadEnStock -= detalle.Cantidad;
+                                await _productoManager.Actualizar(producto);
+                            }
+                        }
+                    }
+                }
+                else // Actualización de una salida existente
+                {
+                    var salidaExistente = await _salidaManager.ObtenerPorId(salida.Id);
+                    if (salidaExistente == null) return NotFound();
+
+                    // Revertir el stock de los productos de la salida anterior
+                    var detallesAnteriores = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == salidaExistente.BultoId);
+                    foreach (var detalle in detallesAnteriores)
+                    {
+                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                        if (producto != null)
+                        {
+                            producto.CantidadEnStock += detalle.Cantidad;
+                            await _productoManager.Actualizar(producto);
+                        }
+                    }
+
+                    // Actualizar la salida
+                    salidaExistente.Fecha = salida.Fecha;
+                    salidaExistente.UsuarioId = salida.UsuarioId;
+                    salidaExistente.BultoId = salida.BultoId;
+
+                    await _salidaManager.Actualizar(salidaExistente);
+
+                    // Obtener los nuevos detalles de la salida
+                    var detallesNuevos = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == salida.BultoId);
+
+                    // Verificar que haya suficiente stock antes de procesar la nueva salida
+                    foreach (var detalle in detallesNuevos)
                     {
                         var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
                         if (producto != null && producto.CantidadEnStock < detalle.Cantidad)
                         {
-                            return Json(new { success = false, message = $"No hay suficiente stock para el producto {producto.Nombre}. Salida cancelada." });
+                            return Json(new { success = false, message = $"No hay suficiente stock para el producto {producto.Nombre}. Actualización cancelada." });
                         }
                     }
 
-                    await _salidaManager.Crear(salida);
-
-                    foreach (var detalle in detalles)
+                    // Procesar la nueva salida
+                    foreach (var detalle in detallesNuevos)
                     {
                         var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
                         if (producto != null)
@@ -133,6 +198,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             return Json(new { success = false, html });
         }
 
+
         /// <summary>
         /// Elimina una salida por su identificador.
         /// </summary>
@@ -146,6 +212,18 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 var salida = await _salidaManager.ObtenerPorId(id);
                 if (salida == null) return NotFound();
 
+                // Obtener los productos en DetalleBulto y revertir stock antes de eliminar la salida
+                var detalles = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == salida.BultoId);
+                foreach (var detalle in detalles)
+                {
+                    var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                    if (producto != null)
+                    {
+                        producto.CantidadEnStock += detalle.Cantidad;
+                        await _productoManager.Actualizar(producto);
+                    }
+                }
+
                 await _salidaManager.Eliminar(id);
                 return RedirectToAction("Index");
             }
@@ -155,6 +233,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 return RedirectToAction("Index");
             }
         }
+
 
         /// <summary>
         /// Exporta la lista de salidas a un archivo Excel.

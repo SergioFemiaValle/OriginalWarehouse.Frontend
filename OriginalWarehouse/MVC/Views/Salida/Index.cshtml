@@ -7,7 +7,7 @@
     <a href="/Salida/ExportarExcel" class="btn btn-success">📥 Exportar a Excel</a>
 </div>
 
-<!-- 🔹 Filtros de búsqueda -->
+<!-- Filtros de búsqueda -->
 <div class="row mb-3">
     <div class="col-md-4">
         <input type="text" id="usuarioFiltro" class="form-control" placeholder="Buscar por Usuario" value="@ViewBag.UsuarioFiltro">
@@ -54,7 +54,7 @@
     </tbody>
 </table>
 
-<!-- 🔹 Paginación -->
+<!-- Paginación -->
 <div class="pagination">
     @if (ViewBag.CurrentPage > 1)
     {
@@ -142,14 +142,14 @@
             }
         }
 
-        // ✅ Aplicar filtros y recargar la página
+        // Aplicar filtros y recargar la página
         function aplicarFiltros() {
             let usuario = document.getElementById("usuarioFiltro").value;
             let bulto = document.getElementById("bultoFiltro").value;
             window.location.href = `?page=1&usuario=${encodeURIComponent(usuario)}&bulto=${encodeURIComponent(bulto)}`;
         }
 
-        // ✅ Limpiar filtros y recargar la página
+        // Limpiar filtros y recargar la página
         function limpiarFiltros() {
             window.location.href = "?page=1";
         }

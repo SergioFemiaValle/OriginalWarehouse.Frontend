@@ -38,11 +38,11 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         /// Muestra la lista de movimientos con filtros y paginación.
         /// </summary>
         /// <returns>Vista con la lista de movimientos.</returns>
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 20, string usuario = "", string bulto = "", string ubicacionOrigen = "", string ubicacionDestino = "")
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10, string usuario = "", string bulto = "", string ubicacionOrigen = "", string ubicacionDestino = "")
         {
             var movimientos = await _movimientoManager.ObtenerTodos();
 
-            // 🔹 Aplicar filtros
+            // Aplicar filtros
             if (!string.IsNullOrEmpty(usuario))
                 movimientos = movimientos.Where(m => m.Usuario != null && m.Usuario.UserName.Equals(usuario, StringComparison.OrdinalIgnoreCase)).ToList();
 
@@ -57,7 +57,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
 
             int totalRegistros = movimientos.Count();
 
-            // 🔹 Paginación
+            // Paginación
             var movimientosPaginados = movimientos.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
             ViewBag.CurrentPage = page;
@@ -66,6 +66,13 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             ViewBag.BultoFiltro = bulto;
             ViewBag.UbicacionOrigenFiltro = ubicacionOrigen;
             ViewBag.UbicacionDestinoFiltro = ubicacionDestino;
+
+            // Pasamos las opciones únicas a la vista
+            ViewBag.Usuarios = movimientos.Select(m => m.Usuario?.UserName).Distinct().Where(u => !string.IsNullOrEmpty(u)).ToList();
+            ViewBag.Bultos = movimientos.Select(m => m.Bulto?.Descripcion).Distinct().Where(b => !string.IsNullOrEmpty(b)).ToList();
+            ViewBag.UbicacionesOrigen = movimientos.Select(m => m.UbicacionOrigen).Distinct().Where(u => !string.IsNullOrEmpty(u)).ToList();
+            ViewBag.UbicacionesDestino = movimientos.Select(m => m.UbicacionDestino).Distinct().Where(u => !string.IsNullOrEmpty(u)).ToList();
+
 
             return View(movimientosPaginados);
         }
@@ -123,6 +130,13 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                     movimientoExistente.UbicacionDestino = movimiento.UbicacionDestino;
 
                     await _movimientoManager.Actualizar(movimientoExistente);
+
+                    var bulto = await _bultoManager.ObtenerPorId(movimiento.BultoId);
+                    if (bulto != null && bulto.UbicacionActual != movimiento.UbicacionDestino)
+                    {
+                        bulto.UbicacionActual = movimiento.UbicacionDestino;
+                        await _bultoManager.Actualizar(bulto);
+                    }
                 }
 
                 return Json(new { success = true, message = "Movimiento guardado correctamente." });
@@ -169,12 +183,19 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 worksheet.Cells[1, 5].Value = "Ubicación Origen";
                 worksheet.Cells[1, 6].Value = "Ubicación Destino";
 
+                using (var headerRange = worksheet.Cells["A1:F1"])
+                {
+                    headerRange.Style.Font.Bold = true;
+                    headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    headerRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
+                }
+
                 int row = 2;
                 foreach (var movimiento in movimientos)
                 {
                     worksheet.Cells[row, 1].Value = movimiento.Id;
                     worksheet.Cells[row, 2].Value = movimiento.Fecha.ToString("dd/MM/yyyy HH:mm");
-                    worksheet.Cells[row, 3].Value = movimiento.Usuario?.UserName ?? "N/A";
+                    worksheet.Cells[row, 3].Value = movimiento.Usuario?.UserName ?? "N/A"; // Corregido
                     worksheet.Cells[row, 4].Value = movimiento.Bulto?.Descripcion ?? "N/A";
                     worksheet.Cells[row, 5].Value = movimiento.UbicacionOrigen;
                     worksheet.Cells[row, 6].Value = movimiento.UbicacionDestino;
@@ -182,6 +203,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 }
 
                 worksheet.Cells.AutoFitColumns();
+
                 var fileContent = package.GetAsByteArray();
                 return File(fileContent, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Movimientos.xlsx");
             }

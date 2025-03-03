@@ -18,17 +18,21 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         private readonly IProductoManager _productoManager;
         private readonly IBultoManager _bultoManager;
         private readonly ICompositeViewEngine _viewEngine;
+        private readonly IEntradaManager _entradaManager;
+        private readonly ISalidaManager _salidaManager;
 
         /// <summary>
         /// Constructor del controlador de detalles de bultos.
         /// </summary>
         public DetalleBultoController(IDetalleBultoManager detalleBultoManager, IProductoManager productoManager,
-                                      IBultoManager bultoManager, ICompositeViewEngine viewEngine)
+                                      IBultoManager bultoManager, ICompositeViewEngine viewEngine, IEntradaManager entradaManager, ISalidaManager salidaManager)
         {
             _detalleBultoManager = detalleBultoManager;
             _productoManager = productoManager;
             _bultoManager = bultoManager;
             _viewEngine = viewEngine;
+            _entradaManager = entradaManager;
+            _salidaManager = salidaManager;
         }
 
         #region public methods
@@ -36,7 +40,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         /// <summary>
         /// Muestra la lista de detalles de bultos con filtros y paginación.
         /// </summary>
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 20, string nombre = "", string lote = "")
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10, string nombre = "", string lote = "")
         {
             var detalles = await _detalleBultoManager.ObtenerTodos();
 
@@ -87,22 +91,86 @@ namespace OriginalWarehouse.Web.MVC.Controllers
 
             if (ModelState.IsValid)
             {
-                if (detalle.Id == 0)
+                if (detalle.Id == 0) // Creación de un nuevo DetalleBulto
                 {
+
+                    var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                    if (producto != null)
+                    {
+                        var bulto = await _bultoManager.ObtenerPorId(detalle.BultoId);
+                        if (bulto != null)
+                        {
+                            var tieneEntrada = await _entradaManager.ObtenerPorId(detalle.BultoId);
+                            var tieneSalida = await _salidaManager.ObtenerPorId(detalle.BultoId);
+
+                            if (tieneEntrada != null)
+                            {
+                                producto.CantidadEnStock += detalle.Cantidad; // Incrementar stock si es una entrada
+                            }
+
+                            if (tieneSalida != null)
+                            {
+                                if (producto.CantidadEnStock < detalle.Cantidad)
+                                {
+                                    return Json(new { success = false, message = $"No hay suficiente stock para el producto {producto.Nombre}. Acción cancelada." });
+                                }
+                                producto.CantidadEnStock -= detalle.Cantidad; // Reducir stock si es una salida
+                            }
+
+                            await _productoManager.Actualizar(producto);
+                        }
+                    }
                     await _detalleBultoManager.Crear(detalle);
                 }
-                else
+                else // Actualización de un DetalleBulto existente
                 {
                     var detalleExistente = await _detalleBultoManager.ObtenerPorId(detalle.Id);
                     if (detalleExistente == null) return NotFound();
 
-                    detalleExistente.BultoId = detalle.BultoId;
-                    detalleExistente.ProductoId = detalle.ProductoId;
-                    detalleExistente.Cantidad = detalle.Cantidad;
-                    detalleExistente.Lote = detalle.Lote;
-                    detalleExistente.FechaDeCaducidad = detalle.FechaDeCaducidad;
+                    var producto = await _productoManager.ObtenerPorId(detalleExistente.ProductoId);
+                    if (producto != null)
+                    {
+                        var bulto = await _bultoManager.ObtenerPorId(detalleExistente.BultoId);
+                        if (bulto != null)
+                        {
+                            var tieneEntrada = await _entradaManager.ObtenerPorId(detalleExistente.BultoId);
+                            var tieneSalida = await _salidaManager.ObtenerPorId(detalleExistente.BultoId);
 
-                    await _detalleBultoManager.Actualizar(detalleExistente);
+                            // Revertir stock anterior antes de actualizar
+                            if (tieneEntrada != null)
+                            {
+                                producto.CantidadEnStock -= detalleExistente.Cantidad; // Revertir stock previo
+                            }
+                            else if (tieneSalida != null)
+                            {
+                                producto.CantidadEnStock += detalleExistente.Cantidad; // Revertir salida previa
+                            }
+
+                            // Aplicar nueva cantidad
+                            detalleExistente.BultoId = detalle.BultoId;
+                            detalleExistente.ProductoId = detalle.ProductoId;
+                            detalleExistente.Cantidad = detalle.Cantidad;
+                            detalleExistente.Lote = detalle.Lote;
+                            detalleExistente.FechaDeCaducidad = detalle.FechaDeCaducidad;
+
+                            // Aplicar nuevo stock
+                            if (tieneEntrada != null)
+                            {
+                                producto.CantidadEnStock += detalle.Cantidad; // Aplicar nuevo stock si es una entrada
+                            }
+                            if (tieneSalida != null)
+                            {
+                                if (producto.CantidadEnStock < detalle.Cantidad)
+                                {
+                                    return Json(new { success = false, message = $"No hay suficiente stock para el producto {producto.Nombre}. Acción cancelada." });
+                                }
+                                producto.CantidadEnStock -= detalle.Cantidad; // Aplicar nueva reducción si es una salida
+                            }
+
+                            await _productoManager.Actualizar(producto);
+                            await _detalleBultoManager.Actualizar(detalleExistente);
+                        }
+                    }
                 }
 
                 return Json(new { success = true, message = "Detalle de Bulto guardado correctamente." });
@@ -112,6 +180,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             var html = await RenderPartialViewToString("_EditCreatePartial", detalle);
             return Json(new { success = false, html });
         }
+
 
         /// <summary>
         /// Elimina un detalle de bulto si no tiene dependencias.
@@ -124,6 +193,28 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 var detalle = await _detalleBultoManager.ObtenerPorId(id);
                 if (detalle == null) return NotFound();
 
+                var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                if (producto != null)
+                {
+                    var bulto = await _bultoManager.ObtenerPorId(detalle.BultoId);
+                    if (bulto != null)
+                    {
+                        var tieneEntrada = await _entradaManager.ObtenerPorId(detalle.BultoId);
+                        var tieneSalida = await _salidaManager.ObtenerPorId(detalle.BultoId);
+
+                        if (tieneEntrada != null)
+                        {
+                            producto.CantidadEnStock -= detalle.Cantidad; // Restar stock si es una entrada
+                        }
+                        if (tieneSalida != null)
+                        {
+                            producto.CantidadEnStock += detalle.Cantidad; // Devolver stock si es una salida
+                        }
+
+                        await _productoManager.Actualizar(producto);
+                    }
+                }
+
                 await _detalleBultoManager.Eliminar(id);
                 return RedirectToAction("Index");
             }
@@ -133,6 +224,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 return RedirectToAction("Index");
             }
         }
+
 
         /// <summary>
         /// Exporta la lista de detalles de bultos a un archivo de Excel.
@@ -147,12 +239,21 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             {
                 var worksheet = package.Workbook.Worksheets.Add("Detalles de Bulto");
 
+                // Encabezados personalizados
                 worksheet.Cells[1, 1].Value = "ID";
                 worksheet.Cells[1, 2].Value = "Bulto";
                 worksheet.Cells[1, 3].Value = "Producto";
                 worksheet.Cells[1, 4].Value = "Cantidad";
                 worksheet.Cells[1, 5].Value = "Lote";
                 worksheet.Cells[1, 6].Value = "Fecha de Caducidad";
+
+                // Aplicar estilos a los encabezados
+                using (var headerRange = worksheet.Cells["A1:F1"])
+                {
+                    headerRange.Style.Font.Bold = true;
+                    headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    headerRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightYellow);
+                }
 
                 int row = 2;
                 foreach (var detalle in detallesBulto)

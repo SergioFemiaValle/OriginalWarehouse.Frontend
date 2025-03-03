@@ -91,20 +91,64 @@ namespace OriginalWarehouse.Web.MVC.Controllers
 
             if (ModelState.IsValid)
             {
-                if (entrada.Id == 0)
+                // Verificar si el bulto ya tiene una entrada asociada
+                var entradaExistentePorBulto = (await _entradaManager.ObtenerTodas()).Where(e => e.BultoId == entrada.BultoId);
+                if (entrada.Id == 0 && entradaExistentePorBulto != null)
                 {
+                    return Json(new { success = false, message = "Este bulto ya tiene una entrada registrada." });
+                }
+
+                if (entrada.Id == 0) // Nueva entrada
+                {
+                    // Obtener los productos en DetalleBulto
+                    var detalles = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == entrada.BultoId);
+                    foreach (var detalle in detalles)
+                    {
+                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                        if (producto != null)
+                        {
+                            producto.CantidadEnStock += detalle.Cantidad;
+                            await _productoManager.Actualizar(producto);
+                        }
+                    }
+
                     await _entradaManager.Crear(entrada);
                 }
-                else
+                else // Actualización de una entrada existente
                 {
                     var entradaExistente = await _entradaManager.ObtenerPorId(entrada.Id);
                     if (entradaExistente == null) return NotFound();
 
+                    // Revertir el stock de los productos de la entrada anterior
+                    var detallesAnteriores = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == entrada.BultoId);
+                    foreach (var detalle in detallesAnteriores)
+                    {
+                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                        if (producto != null)
+                        {
+                            producto.CantidadEnStock -= detalle.Cantidad;
+                            await _productoManager.Actualizar(producto);
+                        }
+                    }
+
+                    // Actualizar la entrada
                     entradaExistente.Fecha = entrada.Fecha;
                     entradaExistente.UsuarioId = entrada.UsuarioId;
                     entradaExistente.BultoId = entrada.BultoId;
 
                     await _entradaManager.Actualizar(entradaExistente);
+
+                    // Aplicar los nuevos detalles de la entrada
+                    var detallesNuevos = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == entrada.BultoId);
+                    foreach (var detalle in detallesNuevos)
+                    {
+                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                        if (producto != null)
+                        {
+                            producto.CantidadEnStock += detalle.Cantidad;
+                            await _productoManager.Actualizar(producto);
+                        }
+                    }
                 }
 
                 return Json(new { success = true, message = "Entrada guardada correctamente." });
@@ -114,6 +158,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             var html = await RenderPartialViewToString("_EditCreatePartial", entrada);
             return Json(new { success = false, html });
         }
+
 
         /// <summary>
         /// Elimina una entrada si no tiene dependencias.
@@ -126,6 +171,18 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 var entrada = await _entradaManager.ObtenerPorId(id);
                 if (entrada == null) return NotFound();
 
+                // Obtener los productos en DetalleBulto y revertir stock antes de eliminar la entrada
+                var detalles = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == entrada.BultoId);
+                foreach (var detalle in detalles)
+                {
+                    var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                    if (producto != null)
+                    {
+                        producto.CantidadEnStock -= detalle.Cantidad;
+                        await _productoManager.Actualizar(producto);
+                    }
+                }
+
                 await _entradaManager.Eliminar(id);
                 return RedirectToAction("Index");
             }
@@ -135,6 +192,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 return RedirectToAction("Index");
             }
         }
+
 
         /// <summary>
         /// Exporta la lista de entradas a un archivo de Excel.
@@ -154,17 +212,25 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 worksheet.Cells[1, 3].Value = "Usuario";
                 worksheet.Cells[1, 4].Value = "Bulto";
 
+                using (var headerRange = worksheet.Cells["A1:D1"])
+                {
+                    headerRange.Style.Font.Bold = true;
+                    headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    headerRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
+                }
+
                 int row = 2;
                 foreach (var entrada in entradas)
                 {
                     worksheet.Cells[row, 1].Value = entrada.Id;
                     worksheet.Cells[row, 2].Value = entrada.Fecha.ToString("dd/MM/yyyy HH:mm");
-                    worksheet.Cells[row, 3].Value = entrada.Usuario?.UserName ?? "N/A";
+                    worksheet.Cells[row, 3].Value = entrada.Usuario?.UserName ?? "N/A"; // Corregido
                     worksheet.Cells[row, 4].Value = entrada.Bulto?.Descripcion ?? "N/A";
                     row++;
                 }
 
                 worksheet.Cells.AutoFitColumns();
+
                 var fileContent = package.GetAsByteArray();
                 return File(fileContent, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Entradas.xlsx");
             }

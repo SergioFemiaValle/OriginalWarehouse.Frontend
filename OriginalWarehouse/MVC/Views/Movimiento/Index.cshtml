@@ -7,7 +7,7 @@
     <a href="/Movimiento/ExportarExcel" class="btn btn-success">📥 Exportar a Excel</a>
 </div>
 
-<!-- 🔹 Filtros de búsqueda con ComboBox -->
+<!-- Filtros de búsqueda con ComboBox -->
 <div class="row mb-3">
     <div class="col-md-3">
         <label for="usuarioFiltro">Usuario</label>
@@ -96,7 +96,7 @@
     </tbody>
 </table>
 
-<!-- 🔹 Paginación -->
+<!-- Paginación -->
 <div class="pagination text-center">
     @if (ViewBag.CurrentPage > 1)
     {
@@ -184,7 +184,7 @@
             }
         }
 
-        // ✅ Aplicar filtros y recargar la página con todos los filtros seleccionados
+        // Aplicar filtros y recargar la página con todos los filtros seleccionados
         function aplicarFiltros() {
             let usuario = document.getElementById("usuarioFiltro").value;
             let bulto = document.getElementById("bultoFiltro").value;
@@ -195,7 +195,7 @@
             window.location.href = `?page=1&usuario=${encodeURIComponent(usuario)}&bulto=${encodeURIComponent(bulto)}&ubicacionOrigen=${encodeURIComponent(ubicacionOrigen)}&ubicacionDestino=${encodeURIComponent(ubicacionDestino)}`;
         }
 
-        // ✅ Limpiar filtros y recargar la página
+        // Limpiar filtros y recargar la página
         function limpiarFiltros() {
             window.location.href = "?page=1";
         }
