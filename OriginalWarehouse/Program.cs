@@ -9,7 +9,7 @@ using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 🔹 **Configurar la cultura global en español**
+// **Configurar la cultura global en español**
 var cultureInfo = new CultureInfo("es-ES")
 {
     NumberFormat = { NumberDecimalSeparator = ".", CurrencyDecimalSeparator = "." }
@@ -17,22 +17,22 @@ var cultureInfo = new CultureInfo("es-ES")
 CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
 CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
-// 🔹 **Configurar conexión a la base de datos**
+// **Configurar conexión a la base de datos**
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-// 🔹 **Registrar los servicios de `Infrastructure`**
+// **Registrar los servicios de `Infrastructure`**
 builder.Services.AddInfrastructure(connectionString);
 
-// 🔹 **Agregar Identity**
+// **Agregar Identity**
 builder.Services.AddIdentity<Usuario, Rol>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-// 🔹 **Agregar Autenticación y Autorización**
+// **Agregar Autenticación y Autorización**
 builder.Services.AddAuthentication();
 builder.Services.AddAuthorization();
 
-// 🔹 **Configurar MVC y Razor Pages**
+// **Configurar MVC y Razor Pages**
 builder.Services.AddControllersWithViews()
     .AddRazorOptions(options =>
     {
@@ -42,7 +42,7 @@ builder.Services.AddControllersWithViews()
 
 builder.Services.AddRazorPages(); // 📌 Esto permite usar Identity con Razor Pages
 
-// 🔹 **Registrar Managers de `Application`**
+// **Registrar Managers de `Application`**
 builder.Services.AddScoped<IProductoManager, ProductoManager>();
 builder.Services.AddScoped<IBultoManager, BultoManager>();
 builder.Services.AddScoped<IDetalleBultoManager, DetalleBultoManager>();
@@ -68,14 +68,14 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// 🔹 **Configurar Rutas**
+// **Configurar Rutas**
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.MapRazorPages();
 
-// 🔹 **Forzar que el usuario pase por el login antes de ver algo**
+// **Forzar que el usuario pase por el login antes de ver algo**
 app.Use(async (context, next) =>
 {
     if (!context.User.Identity.IsAuthenticated && !context.Request.Path.StartsWithSegments("/Account/Login"))

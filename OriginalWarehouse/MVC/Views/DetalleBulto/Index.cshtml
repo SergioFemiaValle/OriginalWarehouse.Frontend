@@ -3,25 +3,25 @@
 <h1>Gestión de Detalles de Bultos</h1>
 
 <div class="mb-3">
-    <button class="btn btn-success" onclick="abrirModal(null)">Crear Detalle</button>
-    <a href="/DetalleBulto/ExportarExcel" class="btn btn-success">📥 Exportar a Excel</a>
+    <button class="btn btn-success" onclick="abrirModal(null)">Crear</button>
+    <a href="/DetalleBulto/ExportarExcel" class="btn btn-success">Exportar a Excel</a>
 </div>
 
 <!-- Filtros de búsqueda -->
 <div class="row mb-3">
-    <div class="col-md-5">
+    <div class="col-md-4">
         <label for="nombreFiltro">Nombre del Producto</label>
         <input type="text" id="nombreFiltro" class="form-control" placeholder="Buscar por nombre" value="@ViewBag.NombreFiltro">
     </div>
 
-    <div class="col-md-5">
+    <div class="col-md-4">
         <label for="loteFiltro">Lote</label>
         <input type="text" id="loteFiltro" class="form-control" placeholder="Buscar por lote" value="@ViewBag.LoteFiltro">
     </div>
 
-    <div class="col-md-2 mt-4 text-center">
-        <button class="btn btn-primary" onclick="aplicarFiltros()">🔍 Filtrar</button>
-        <button class="btn btn-secondary" onclick="limpiarFiltros()">❌ Limpiar</button>
+    <div class="col-md-4 mt-4 d-flex gap-2 justify-content-center">
+        <button class="btn btn-primary" onclick="aplicarFiltros()">Filtrar</button>
+        <button class="btn btn-secondary" onclick="limpiarFiltros()">Limpiar</button>
     </div>
 </div>
 

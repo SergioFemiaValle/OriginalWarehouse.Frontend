@@ -5,7 +5,8 @@
 
     <div class="form-group mb-3">
         <label for="Descripcion">Descripción</label>
-        <input type="text" id="Descripcion" name="Descripcion" value="@Model.Descripcion" class="form-control" required />
+        <input type="text" id="Descripcion" name="Descripcion" value="@Model.Descripcion"
+               class="form-control" required oninput="this.value = this.value.trim()" />
         <span asp-validation-for="Descripcion" class="text-danger"></span>
     </div>
 

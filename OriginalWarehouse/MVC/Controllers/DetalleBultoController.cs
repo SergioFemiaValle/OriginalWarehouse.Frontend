@@ -100,8 +100,8 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                         var bulto = await _bultoManager.ObtenerPorId(detalle.BultoId);
                         if (bulto != null)
                         {
-                            var tieneEntrada = await _entradaManager.ObtenerPorId(detalle.BultoId);
-                            var tieneSalida = await _salidaManager.ObtenerPorId(detalle.BultoId);
+                            var tieneEntrada = await _entradaManager.ObtenerPorId(detalle.BultoId) ?? null;
+                            var tieneSalida = await _salidaManager.ObtenerPorId(detalle.BultoId) ?? null;
 
                             if (tieneEntrada != null)
                             {
@@ -112,7 +112,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                             {
                                 if (producto.CantidadEnStock < detalle.Cantidad)
                                 {
-                                    return Json(new { success = false, message = $"No hay suficiente stock para el producto {producto.Nombre}. Acción cancelada." });
+                                    return Json(new { success = true, message = $"No hay suficiente stock para el producto {producto.Nombre}. Acción cancelada." });
                                 }
                                 producto.CantidadEnStock -= detalle.Cantidad; // Reducir stock si es una salida
                             }
@@ -133,8 +133,8 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                         var bulto = await _bultoManager.ObtenerPorId(detalleExistente.BultoId);
                         if (bulto != null)
                         {
-                            var tieneEntrada = await _entradaManager.ObtenerPorId(detalleExistente.BultoId);
-                            var tieneSalida = await _salidaManager.ObtenerPorId(detalleExistente.BultoId);
+                            var tieneEntrada = await _entradaManager.ObtenerPorId(detalleExistente.BultoId) ?? null;
+                            var tieneSalida = await _salidaManager.ObtenerPorId(detalleExistente.BultoId) ?? null;
 
                             // Revertir stock anterior antes de actualizar
                             if (tieneEntrada != null)
@@ -162,7 +162,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                             {
                                 if (producto.CantidadEnStock < detalle.Cantidad)
                                 {
-                                    return Json(new { success = false, message = $"No hay suficiente stock para el producto {producto.Nombre}. Acción cancelada." });
+                                    return Json(new { success = true, message = $"No hay suficiente stock para el producto {producto.Nombre}. Acción cancelada." });
                                 }
                                 producto.CantidadEnStock -= detalle.Cantidad; // Aplicar nueva reducción si es una salida
                             }

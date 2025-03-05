@@ -107,7 +107,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 var salidaExistentePorBulto = (await _salidaManager.ObtenerTodas()).Where(e => e.BultoId == salida.BultoId);
                 if (salida.Id == 0 && salidaExistentePorBulto != null)
                 {
-                    return Json(new { success = false, message = "Este bulto ya tiene una salida registrada." });
+                    return Json(new { success = true, message = "Este bulto ya tiene una salida registrada." });
                 }
 
                 if (salida.Id == 0) // Nueva salida

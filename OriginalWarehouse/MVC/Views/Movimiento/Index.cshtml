@@ -3,13 +3,13 @@
 <h1>Gestión de Movimientos</h1>
 
 <div class="mb-3">
-    <button class="btn btn-success" onclick="abrirModal(null)">Registrar Movimiento</button>
-    <a href="/Movimiento/ExportarExcel" class="btn btn-success">📥 Exportar a Excel</a>
+    <button class="btn btn-success" onclick="abrirModal(null)">Crear</button>
+    <a href="/Movimiento/ExportarExcel" class="btn btn-success">Exportar a Excel</a>
 </div>
 
 <!-- Filtros de búsqueda con ComboBox -->
 <div class="row mb-3">
-    <div class="col-md-3">
+    <div class="col-md-2">
         <label for="usuarioFiltro">Usuario</label>
         <select id="usuarioFiltro" class="form-control">
             <option value="">Todos</option>
@@ -20,7 +20,7 @@
         </select>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md-2">
         <label for="bultoFiltro">Bulto</label>
         <select id="bultoFiltro" class="form-control">
             <option value="">Todos</option>
@@ -31,7 +31,7 @@
         </select>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md-2">
         <label for="ubicacionOrigenFiltro">Ubicación Origen</label>
         <select id="ubicacionOrigenFiltro" class="form-control">
             <option value="">Todas</option>
@@ -42,7 +42,7 @@
         </select>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md-2">
         <label for="ubicacionDestinoFiltro">Ubicación Destino</label>
         <select id="ubicacionDestinoFiltro" class="form-control">
             <option value="">Todas</option>
@@ -53,9 +53,9 @@
         </select>
     </div>
 
-    <div class="col-md-12 mt-3 text-center">
-        <button class="btn btn-primary" onclick="aplicarFiltros()">🔍 Filtrar</button>
-        <button class="btn btn-secondary" onclick="limpiarFiltros()">❌ Limpiar</button>
+    <div class="col-md-4 mt-4 d-flex gap-2 justify-content-center">
+        <button class="btn btn-primary" onclick="aplicarFiltros()">Filtrar</button>
+        <button class="btn btn-secondary" onclick="limpiarFiltros()">Limpiar</button>
     </div>
 </div>
 

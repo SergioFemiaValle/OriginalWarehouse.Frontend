@@ -95,7 +95,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 var entradaExistentePorBulto = (await _entradaManager.ObtenerTodas()).Where(e => e.BultoId == entrada.BultoId);
                 if (entrada.Id == 0 && entradaExistentePorBulto != null)
                 {
-                    return Json(new { success = false, message = "Este bulto ya tiene una entrada registrada." });
+                    return Json(new { success = true, message = "Este bulto ya tiene una entrada registrada." });
                 }
 
                 if (entrada.Id == 0) // Nueva entrada
