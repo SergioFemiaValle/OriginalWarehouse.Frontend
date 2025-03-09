@@ -4,7 +4,8 @@
     <input type="hidden" name="Id" value="@Model.Id" />
     <div class="form-group mb-3">
         <label for="Nombre">Nombre</label>
-        <input type="text" id="Nombre" name="Nombre" value="@Model.Nombre" class="form-control" />
+        <input type="text" id="Nombre" name="Nombre" value="@Model.Nombre" class="form-control"
+               required oninput="this.value = this.value.trim()" />
         <span asp-validation-for="Nombre" class="text-danger"></span>
     </div>
 

@@ -141,7 +141,8 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                             {
                                 producto.CantidadEnStock -= detalleExistente.Cantidad; // Revertir stock previo
                             }
-                            else if (tieneSalida != null)
+
+                            if (tieneSalida != null)
                             {
                                 producto.CantidadEnStock += detalleExistente.Cantidad; // Revertir salida previa
                             }

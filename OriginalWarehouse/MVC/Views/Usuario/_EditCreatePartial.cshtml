@@ -17,13 +17,13 @@
 
     <div class="form-group mb-3">
         <label for="Password">Contraseña</label>
-        <input type="password" id="Password" name="Password" class="form-control" placeholder="Ingrese una nueva contraseña (opcional)" />
+        <input type="password" id="Password" name="Password" class="form-control" placeholder="Ingrese una nueva contraseña (opcional)" required/>
         <span asp-validation-for="Password" class="text-danger"></span>
     </div>
 
     <div class="form-group mb-3">
         <label for="RolId">Rol</label>
-        <select id="RolId" name="RolId" class="form-control">
+        <select id="RolId" name="RolId" class="form-control" required>
             <option value="">Seleccione un rol</option>
             @foreach (var rol in (IEnumerable<Microsoft.AspNetCore.Identity.IdentityRole<int>>)ViewBag.Roles)
             {

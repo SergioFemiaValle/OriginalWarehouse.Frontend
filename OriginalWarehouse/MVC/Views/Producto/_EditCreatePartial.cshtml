@@ -4,25 +4,25 @@
     <input type="hidden" name="Id" value="@Model.Id" />
     <div class="form-group mb-3">
         <label for="Nombre">Nombre</label>
-        <input type="text" id="Nombre" name="Nombre" value="@Model.Nombre" class="form-control" />
+        <input type="text" id="Nombre" name="Nombre" value="@Model.Nombre" class="form-control" required oninput="this.value = this.value.trim()" />
         <span asp-validation-for="Nombre" class="text-danger"></span>
     </div>
 
     <div class="form-group mb-3">
         <label for="Precio">Precio</label>
-        <input type="number" id="Precio" name="Precio" value="@Model.Precio.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" step="0.01" min="0.01" />
+        <input type="number" id="Precio" name="Precio" value="@Model.Precio.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" step="0.01" min="0.01" required/>
         <span asp-validation-for="Precio" class="text-danger"></span>
     </div>
 
     <div class="form-group mb-3">
         <label for="CantidadEnStock">Cantidad en Stock</label>
-        <input type="number" id="CantidadEnStock" name="CantidadEnStock" value="@Model.CantidadEnStock" class="form-control" min="0" />
+        <input type="number" id="CantidadEnStock" name="CantidadEnStock" value="@Model.CantidadEnStock" class="form-control" min="0" required/>
         <span asp-validation-for="CantidadEnStock" class="text-danger"></span>
     </div>
 
     <div class="form-group mb-3">
         <label for="CategoriaId">Categoría</label>
-        <select id="CategoriaId" name="CategoriaId" class="form-control">
+        <select id="CategoriaId" name="CategoriaId" class="form-control" required>
             <option value="">Seleccione una categoría</option>
             @foreach (var categoria in (IEnumerable<dynamic>)ViewBag.Categorias)
             {
@@ -35,7 +35,7 @@
 
     <div class="form-group mb-3">
         <label for="AlmacenamientoEspecialId">Almacenamiento Especial</label>
-        <select id="AlmacenamientoEspecialId" name="AlmacenamientoEspecialId" class="form-control">
+        <select id="AlmacenamientoEspecialId" name="AlmacenamientoEspecialId" class="form-control" required>
             <option value="">Seleccione un almacenamiento especial</option>
             @foreach (var almacenamiento in (IEnumerable<dynamic>)ViewBag.AlmacenamientosEspeciales)
             {

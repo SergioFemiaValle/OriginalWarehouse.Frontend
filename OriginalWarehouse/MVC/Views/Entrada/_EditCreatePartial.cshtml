@@ -11,7 +11,7 @@
 
     <div class="form-group mb-3">
         <label for="UsuarioId">Usuario</label>
-        <select id="UsuarioId" name="UsuarioId" class="form-control">
+        <select id="UsuarioId" name="UsuarioId" class="form-control" required>
             <option value="0" @(Model.UsuarioId == 0 ? "selected" : "")>Seleccione un usuario</option>
             @foreach (var usuario in (IEnumerable<dynamic>)ViewBag.Usuarios)
             {
@@ -24,7 +24,7 @@
 
     <div class="form-group mb-3">
         <label for="BultoId">Bulto</label>
-        <select id="BultoId" name="BultoId" class="form-control">
+        <select id="BultoId" name="BultoId" class="form-control" required>
             <option value="0" @(Model.BultoId == 0 ? "selected" : "")>Seleccione un bulto</option>
             @foreach (var bulto in (IEnumerable<dynamic>)ViewBag.Bultos)
             {

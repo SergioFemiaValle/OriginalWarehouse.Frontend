@@ -12,13 +12,14 @@
 
     <div class="form-group mb-3">
         <label for="UbicacionActual">Ubicación Actual</label>
-        <input type="text" id="UbicacionActual" name="UbicacionActual" value="@Model.UbicacionActual" class="form-control" required />
+        <input type="text" id="UbicacionActual" name="UbicacionActual" value="@Model.UbicacionActual"
+               class="form-control" required oninput="this.value = this.value.trim()" />
         <span asp-validation-for="UbicacionActual" class="text-danger"></span>
     </div>
 
     <div class="form-group mb-3">
         <label for="EstadoId">Estado</label>
-        <select id="EstadoId" name="EstadoId" class="form-control">
+        <select id="EstadoId" name="EstadoId" class="form-control" required>
             <option value="">Seleccione un estado</option>
             @foreach (var estado in (IEnumerable<dynamic>)ViewBag.Estados)
             {
