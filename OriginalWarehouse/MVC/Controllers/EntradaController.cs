@@ -316,14 +316,18 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         private async Task CargarListas()
         {
             ViewBag.Usuarios = _userManager.Users.ToList();
+
             var bultos = await _bultoManager.ObtenerTodos();
             var detalles = await _detalleBultoManager.ObtenerTodos();
+            var entradas = await _entradaManager.ObtenerTodas();
 
-            // Obtener IDs de bultos que tienen al menos un detalle
             var bultosConDetallesIds = detalles.Select(d => d.BultoId).Distinct();
+            var bultosConEntradaIds = entradas.Select(e => e.BultoId).Distinct();
 
-            // Filtrar solo los bultos que tienen detalles
-            ViewBag.Bultos = bultos.Where(b => bultosConDetallesIds.Contains(b.Id)).ToList();
+            ViewBag.Bultos = bultos
+                .Where(b => bultosConDetallesIds.Contains(b.Id) && !bultosConEntradaIds.Contains(b.Id))
+                .ToList();
         }
+
     }
 }

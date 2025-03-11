@@ -28,7 +28,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         /// <param name="bultoManager">Gestor de bultos.</param>
         /// <param name="userManager">Gestor de usuarios.</param>
         /// <param name="viewEngine">Motor de vistas.</param>
-        public SalidaController(ISalidaManager salidaManager, IBultoManager bultoManager, 
+        public SalidaController(ISalidaManager salidaManager, IBultoManager bultoManager,
             UserManager<Usuario> userManager, ICompositeViewEngine viewEngine,
             IDetalleBultoManager detalleBultoManager, IProductoManager productoManager)
         {
@@ -139,7 +139,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                     if (productosConStockNegativo.Any())
                     {
                         var mensaje = string.Join(", ", productosConStockNegativo.Select(p => $"Producto ID {p.Key}: stock insuficiente"));
-                        return Json(new { success = false, message = $"No se puede realizar la salida. {mensaje}" });
+                        return Json(new { success = true, message = $"No se puede realizar la salida. {mensaje}" });
                     }
 
                     // Si todo OK, aplicar cambios reales
@@ -339,14 +339,17 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         private async Task CargarListas()
         {
             ViewBag.Usuarios = _userManager.Users.ToList();
+
             var bultos = await _bultoManager.ObtenerTodos();
-    var detalles = await _detalleBultoManager.ObtenerTodos();
+            var detalles = await _detalleBultoManager.ObtenerTodos();
+            var salidas = await _salidaManager.ObtenerTodas();
 
-    // Obtener IDs de bultos que tienen al menos un detalle
-    var bultosConDetallesIds = detalles.Select(d => d.BultoId).Distinct();
+            var bultosConDetallesIds = detalles.Select(d => d.BultoId).Distinct();
+            var bultosConSalidaIds = salidas.Select(s => s.BultoId).Distinct();
 
-    // Filtrar solo los bultos que tienen detalles
-    ViewBag.Bultos = bultos.Where(b => bultosConDetallesIds.Contains(b.Id)).ToList();
+            ViewBag.Bultos = bultos
+                .Where(b => bultosConDetallesIds.Contains(b.Id) && !bultosConSalidaIds.Contains(b.Id))
+                .ToList();
         }
     }
 }

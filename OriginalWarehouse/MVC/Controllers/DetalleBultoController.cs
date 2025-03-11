@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using OfficeOpenXml;
 using OriginalWarehouse.Application.Interfaces;
 using OriginalWarehouse.Domain.Entities;
+using OriginalWarehouse.Web.MVC.Models;
 
 namespace OriginalWarehouse.Web.MVC.Controllers
 {
@@ -40,10 +41,17 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         /// <summary>
         /// Muestra la lista de detalles de bultos con filtros y paginación.
         /// </summary>
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 10, string nombre = "", string lote = "")
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10, string nombre = "", string lote = "", string bulto = "")
         {
             var detalles = await _detalleBultoManager.ObtenerTodos();
+            var entradas = await _entradaManager.ObtenerTodas();
+            var salidas = await _salidaManager.ObtenerTodas();
 
+            // IDs de bultos con entradas/salidas
+            var bultosConEntrada = entradas.Select(e => e.BultoId).Distinct().ToList();
+            var bultosConSalida = salidas.Select(s => s.BultoId).Distinct().ToList();
+
+            // Aplicar filtros si existen
             if (!string.IsNullOrEmpty(nombre))
             {
                 detalles = detalles.Where(d => d.Producto != null && d.Producto.Nombre.Contains(nombre, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -54,16 +62,34 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 detalles = detalles.Where(d => !string.IsNullOrEmpty(d.Lote) && d.Lote.Contains(lote, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
-            int totalRegistros = detalles.Count();
-            var detallesPaginados = detalles.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            if (!string.IsNullOrEmpty(bulto))
+            {
+                detalles = detalles.Where(d => d.Bulto != null && d.Bulto.Descripcion.Contains(bulto, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
 
+            // Enriquecer con entrada/salida
+            var detallesConEstado = detalles.Select(d => new DetalleBultoConEstado
+            {
+                Detalle = d,
+                TieneEntrada = bultosConEntrada.Contains(d.BultoId),
+                TieneSalida = bultosConSalida.Contains(d.BultoId)
+            }).ToList();
+
+            // Paginación
+            int totalRegistros = detallesConEstado.Count();
+            var detallesPaginados = detallesConEstado.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            // Pasar filtros a la vista
             ViewBag.CurrentPage = page;
             ViewBag.TotalPages = (int)Math.Ceiling(totalRegistros / (double)pageSize);
             ViewBag.NombreFiltro = nombre;
             ViewBag.LoteFiltro = lote;
+            ViewBag.BultoFiltro = bulto;
 
             return View(detallesPaginados);
         }
+
+
 
         /// <summary>
         /// Muestra la vista parcial para la creación o edición de un detalle de bulto.

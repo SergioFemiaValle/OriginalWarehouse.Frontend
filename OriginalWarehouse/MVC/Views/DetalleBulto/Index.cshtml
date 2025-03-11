@@ -1,4 +1,4 @@
-﻿@model IEnumerable<OriginalWarehouse.Domain.Entities.DetalleBulto>
+﻿@model IEnumerable<OriginalWarehouse.Web.MVC.Models.DetalleBultoConEstado>
 
 <h1>Gestión de Detalles de Bultos</h1>
 
@@ -9,17 +9,22 @@
 
 <!-- Filtros de búsqueda -->
 <div class="row mb-3">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <label for="nombreFiltro">Nombre del Producto</label>
         <input type="text" id="nombreFiltro" class="form-control" placeholder="Buscar por nombre" value="@ViewBag.NombreFiltro">
     </div>
 
-    <div class="col-md-4">
+    <div class="col-md-3">
         <label for="loteFiltro">Lote</label>
         <input type="text" id="loteFiltro" class="form-control" placeholder="Buscar por lote" value="@ViewBag.LoteFiltro">
     </div>
 
-    <div class="col-md-4 mt-4 d-flex gap-2 justify-content-center">
+    <div class="col-md-3">
+        <label for="bultoFiltro">Bulto</label>
+        <input type="text" id="bultoFiltro" class="form-control" placeholder="Buscar por bulto" value="@ViewBag.BultoFiltro">
+    </div>
+
+    <div class="col-md-3 mt-4 d-flex gap-2 justify-content-center">
         <button class="btn btn-primary" onclick="aplicarFiltros()">Filtrar</button>
         <button class="btn btn-secondary" onclick="limpiarFiltros()">Limpiar</button>
     </div>
@@ -34,6 +39,8 @@
             <th>Cantidad</th>
             <th>Lote</th>
             <th>Fecha de Caducidad</th>
+            <th>Entrada</th> 
+            <th>Salida</th>  
             @if (User.IsInRole("Administrador"))
             {
                 <th>Acciones</th>
@@ -41,20 +48,40 @@
         </tr>
     </thead>
     <tbody>
-        @foreach (var detalle in Model)
+        @foreach (var item in Model)
         {
             <tr>
-                <td>@detalle.Id</td>
-                <td>@detalle.Bulto?.Descripcion</td>
-                <td>@detalle.Producto?.Nombre</td>
-                <td>@detalle.Cantidad</td>
-                <td>@detalle.Lote</td>
-                <td>@detalle.FechaDeCaducidad?.ToString("dd/MM/yyyy")</td>
+                <td>@item.Detalle.Id</td>
+                <td>@item.Detalle.Bulto?.Descripcion</td>
+                <td>@item.Detalle.Producto?.Nombre</td>
+                <td>@item.Detalle.Cantidad</td>
+                <td>@item.Detalle.Lote</td>
+                <td>@item.Detalle.FechaDeCaducidad?.ToString("dd/MM/yyyy")</td>
+                <td>
+                    @if (item.TieneEntrada)
+                    {
+                        <span class="badge bg-success">Sí</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">No</span>
+                    }
+                </td>
+                <td>
+                    @if (item.TieneSalida)
+                    {
+                        <span class="badge bg-warning">Sí</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">No</span>
+                    }
+                </td>
                 @if (User.IsInRole("Administrador"))
                 {
                     <td>
-                        <button class="btn btn-primary btn-sm" onclick="abrirModal(@detalle.Id)">Editar</button>
-                        <button class="btn btn-danger btn-sm" onclick="eliminarDetalle(@detalle.Id)">Eliminar</button>
+                        <button class="btn btn-primary btn-sm" onclick="abrirModal(@item.Detalle.Id)">Editar</button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarDetalle(@item.Detalle.Id)">Eliminar</button>
                     </td>
                 }
             </tr>
@@ -66,17 +93,17 @@
 <div class="pagination text-center">
     @if (ViewBag.CurrentPage > 1)
     {
-        <a href="?page=@(ViewBag.CurrentPage - 1)&nombre=@ViewBag.NombreFiltro&lote=@ViewBag.LoteFiltro" class="btn btn-secondary">⬅ Anterior</a>
+        <a href="?page=@(ViewBag.CurrentPage - 1)&nombre=@ViewBag.NombreFiltro&lote=@ViewBag.LoteFiltro&bulto=@ViewBag.BultoFiltro" class="btn btn-secondary">⬅ Anterior</a>
     }
 
     @for (int i = 1; i <= ViewBag.TotalPages; i++)
     {
-        <a href="?page=@i&nombre=@ViewBag.NombreFiltro&lote=@ViewBag.LoteFiltro" class="btn @(i == ViewBag.CurrentPage ? "btn-primary" : "btn-outline-primary")">@i</a>
+        <a href="?page=@i&nombre=@ViewBag.NombreFiltro&lote=@ViewBag.LoteFiltro&bulto=@ViewBag.BultoFiltro" class="btn @(i == ViewBag.CurrentPage ? "btn-primary" : "btn-outline-primary")">@i</a>
     }
 
     @if (ViewBag.CurrentPage < ViewBag.TotalPages)
     {
-        <a href="?page=@(ViewBag.CurrentPage + 1)&nombre=@ViewBag.NombreFiltro&lote=@ViewBag.LoteFiltro" class="btn btn-secondary">Siguiente ➡</a>
+        <a href="?page=@(ViewBag.CurrentPage + 1)&nombre=@ViewBag.NombreFiltro&lote=@ViewBag.LoteFiltro&bulto=@ViewBag.BultoFiltro" class="btn btn-secondary">Siguiente ➡</a>
     }
 </div>
 
@@ -153,7 +180,8 @@
         function aplicarFiltros() {
             let nombre = document.getElementById("nombreFiltro").value;
             let lote = document.getElementById("loteFiltro").value;
-            window.location.href = `?nombre=${nombre}&lote=${lote}`;
+            let bulto = document.getElementById("bultoFiltro").value;
+            window.location.href = `?nombre=${nombre}&lote=${lote}&bulto=${bulto}`;
         }
 
         function limpiarFiltros() {

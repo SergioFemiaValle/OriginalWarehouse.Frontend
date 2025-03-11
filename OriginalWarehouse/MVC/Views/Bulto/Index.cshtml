@@ -1,4 +1,4 @@
-﻿@model IEnumerable<OriginalWarehouse.Domain.Entities.Bulto>
+﻿@model IEnumerable<OriginalWarehouse.Web.MVC.Models.BultoConEstado>
 
 <h1>Gestión de Bultos</h1>
 
@@ -44,6 +44,8 @@
             <th>Descripción</th>
             <th>Ubicación Actual</th>
             <th>Estado</th>
+            <th>Entrada</th> 
+            <th>Salida</th> 
             @if (User.IsInRole("Administrador"))
             {
                 <th>Acciones</th>
@@ -51,18 +53,38 @@
         </tr>
     </thead>
     <tbody>
-        @foreach (var bulto in Model)
+        @foreach (var item in Model)
         {
             <tr>
-                <td>@bulto.Id</td>
-                <td>@bulto.Descripcion</td>
-                <td>@bulto.UbicacionActual</td>
-                <td>@bulto.Estado?.Nombre</td>
+                <td>@item.Bulto.Id</td>
+                <td>@item.Bulto.Descripcion</td>
+                <td>@item.Bulto.UbicacionActual</td>
+                <td>@item.Bulto.Estado?.Nombre</td>
+                <td>
+                    @if (item.TieneEntrada)
+                    {
+                        <span class="badge bg-success">Sí</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">No</span>
+                    }
+                </td>
+                <td>
+                    @if (item.TieneSalida)
+                    {
+                        <span class="badge bg-warning">Sí</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">No</span>
+                    }
+                </td>
                 @if (User.IsInRole("Administrador"))
                 {
                     <td>
-                        <button class="btn btn-primary btn-sm" onclick="abrirModal(@bulto.Id)">Editar</button>
-                        <button class="btn btn-danger btn-sm" onclick="eliminarBulto(@bulto.Id)">Eliminar</button>
+                        <button class="btn btn-primary btn-sm" onclick="abrirModal(@item.Bulto.Id)">Editar</button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarBulto(@item.Bulto.Id)">Eliminar</button>
                     </td>
                 }
             </tr>

@@ -5,7 +5,7 @@
     <div class="form-group mb-3">
         <label for="Nombre">Nombre</label>
         <input type="text" id="Nombre" name="Nombre" value="@Model.Nombre" class="form-control"
-               required oninput="this.value = this.value.trim()" />
+               required pattern=".*\S.*" />
         <span asp-validation-for="Nombre" class="text-danger"></span>
     </div>
 

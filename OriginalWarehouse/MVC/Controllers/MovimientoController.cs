@@ -104,14 +104,17 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         {
             ModelState.Remove(nameof(movimiento.Usuario));
             ModelState.Remove(nameof(movimiento.Bulto));
+            ModelState.Remove(nameof(movimiento.UbicacionOrigen));
 
             if (ModelState.IsValid)
             {
                 if (movimiento.Id == 0)
                 {
+                    var bulto = await _bultoManager.ObtenerPorId(movimiento.BultoId);
+
+                    movimiento.UbicacionOrigen = bulto.UbicacionActual;
                     await _movimientoManager.Crear(movimiento);
 
-                    var bulto = await _bultoManager.ObtenerPorId(movimiento.BultoId);
                     if (bulto != null)
                     {
                         bulto.UbicacionActual = movimiento.UbicacionDestino;
@@ -123,6 +126,8 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                     var movimientoExistente = await _movimientoManager.ObtenerPorId(movimiento.Id);
                     if (movimientoExistente == null) return NotFound();
 
+                    var bulto = await _bultoManager.ObtenerPorId(movimiento.BultoId);
+
                     movimientoExistente.Fecha = movimiento.Fecha;
                     movimientoExistente.UsuarioId = movimiento.UsuarioId;
                     movimientoExistente.BultoId = movimiento.BultoId;
@@ -130,8 +135,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                     movimientoExistente.UbicacionDestino = movimiento.UbicacionDestino;
 
                     await _movimientoManager.Actualizar(movimientoExistente);
-
-                    var bulto = await _bultoManager.ObtenerPorId(movimiento.BultoId);
+                    
                     if (bulto != null && bulto.UbicacionActual != movimiento.UbicacionDestino)
                     {
                         bulto.UbicacionActual = movimiento.UbicacionDestino;

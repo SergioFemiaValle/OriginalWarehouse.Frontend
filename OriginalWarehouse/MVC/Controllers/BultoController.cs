@@ -6,6 +6,7 @@ using OfficeOpenXml;
 using OriginalWarehouse.Application.Interfaces;
 using OriginalWarehouse.Application.Managers;
 using OriginalWarehouse.Domain.Entities;
+using OriginalWarehouse.Web.MVC.Models;
 
 namespace OriginalWarehouse.Web.MVC.Controllers
 {
@@ -49,6 +50,12 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         public async Task<IActionResult> Index(int page = 1, int pageSize = 10, string ubicacion = "", string estado = "")
         {
             var bultos = await _bultoManager.ObtenerTodos();
+            var entradas = await _entradaManager.ObtenerTodas();
+            var salidas = await _salidaManager.ObtenerTodas();
+
+            // IDs de bultos con entradas/salidas
+            var bultosConEntrada = entradas.Select(e => e.BultoId).Distinct().ToList();
+            var bultosConSalida = salidas.Select(s => s.BultoId).Distinct().ToList();
 
             // Filtrado por Ubicación
             if (!string.IsNullOrEmpty(ubicacion))
@@ -62,8 +69,17 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 bultos = bultos.Where(b => b.Estado != null && b.Estado.Nombre.Equals(estado, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
-            int totalRegistros = bultos.Count();
-            var bultosPaginados = bultos.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            // Enriquecer los bultos con información de entrada/salida
+            var bultosConEstado = bultos.Select(b => new BultoConEstado
+            {
+                Bulto = b,
+                TieneEntrada = bultosConEntrada.Contains(b.Id),
+                TieneSalida = bultosConSalida.Contains(b.Id)
+            }).ToList();
+
+            // Paginación
+            int totalRegistros = bultosConEstado.Count();
+            var bultosPaginados = bultosConEstado.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
             ViewBag.CurrentPage = page;
             ViewBag.TotalPages = (int)Math.Ceiling(totalRegistros / (double)pageSize);
@@ -75,6 +91,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
 
             return View(bultosPaginados);
         }
+
 
         /// <summary>
         /// Muestra la vista parcial para la creación o edición de un bulto.

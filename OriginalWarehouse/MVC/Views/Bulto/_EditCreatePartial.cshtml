@@ -6,14 +6,14 @@
     <div class="form-group mb-3">
         <label for="Descripcion">Descripción</label>
         <input type="text" id="Descripcion" name="Descripcion" value="@Model.Descripcion"
-               class="form-control" required oninput="this.value = this.value.trim()" />
+               class="form-control" required pattern=".*\S.*" />
         <span asp-validation-for="Descripcion" class="text-danger"></span>
     </div>
 
     <div class="form-group mb-3">
         <label for="UbicacionActual">Ubicación Actual</label>
         <input type="text" id="UbicacionActual" name="UbicacionActual" value="@Model.UbicacionActual"
-               class="form-control" required oninput="this.value = this.value.trim()" />
+               class="form-control" required pattern=".*\S.*" />
         <span asp-validation-for="UbicacionActual" class="text-danger"></span>
     </div>
 
