@@ -105,7 +105,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             {
                 // Verificar si el bulto ya tiene una salida asociada
                 var salidaExistentePorBulto = (await _salidaManager.ObtenerTodas()).Where(e => e.BultoId == salida.BultoId);
-                if (salida.Id == 0 && salidaExistentePorBulto != null)
+                if (salida.Id == 0 && salidaExistentePorBulto.Any())
                 {
                     return Json(new { success = true, message = "Este bulto ya tiene una salida registrada." });
                 }
@@ -113,42 +113,100 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 if (salida.Id == 0) // Nueva salida
                 {
                     var bulto = await _bultoManager.ObtenerPorId(salida.BultoId);
-                    if (bulto != null)
+                    if (bulto == null) return NotFound();
+
+                    var detalles = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == salida.BultoId).ToList();
+
+                    if (!detalles.Any())
                     {
-                        // Obtener los productos en DetalleBulto
-                        var detalles = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == salida.BultoId);
+                        return Json(new { success = true, message = "No se puede realizar una salida sin detalles." });
+                    }
 
-                        // Verificar si hay suficiente stock antes de realizar la salida
-                        foreach (var detalle in detalles)
-                        {
-                            var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
-                            if (producto != null && producto.CantidadEnStock < detalle.Cantidad)
-                            {
-                                return Json(new { success = false, message = $"No hay suficiente stock para el producto {producto.Nombre}. Salida cancelada." });
-                            }
-                        }
+                    // Simular stock final y verificar que no quede negativo
+                    var productosAfectados = new Dictionary<int, int>();
 
-                        // Registrar la salida y actualizar stock
-                        await _salidaManager.Crear(salida);
-                        foreach (var detalle in detalles)
+                    foreach (var detalle in detalles)
+                    {
+                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                        if (producto != null)
                         {
-                            var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
-                            if (producto != null)
-                            {
-                                producto.CantidadEnStock -= detalle.Cantidad;
-                                await _productoManager.Actualizar(producto);
-                            }
+                            productosAfectados[detalle.ProductoId] = producto.CantidadEnStock - detalle.Cantidad;
                         }
                     }
+
+                    // Comprobar stock suficiente
+                    var productosConStockNegativo = productosAfectados.Where(p => p.Value < 0).ToList();
+                    if (productosConStockNegativo.Any())
+                    {
+                        var mensaje = string.Join(", ", productosConStockNegativo.Select(p => $"Producto ID {p.Key}: stock insuficiente"));
+                        return Json(new { success = false, message = $"No se puede realizar la salida. {mensaje}" });
+                    }
+
+                    // Si todo OK, aplicar cambios reales
+                    foreach (var detalle in detalles)
+                    {
+                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
+                        if (producto != null)
+                        {
+                            producto.CantidadEnStock -= detalle.Cantidad;
+                            await _productoManager.Actualizar(producto);
+                        }
+                    }
+
+                    await _salidaManager.Crear(salida);
                 }
                 else // Actualización de una salida existente
                 {
                     var salidaExistente = await _salidaManager.ObtenerPorId(salida.Id);
                     if (salidaExistente == null) return NotFound();
 
-                    // Revertir el stock de los productos de la salida anterior
-                    var detallesAnteriores = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == salidaExistente.BultoId);
-                    foreach (var detalle in detallesAnteriores)
+                    var detallesAntiguos = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == salidaExistente.BultoId).ToList();
+                    var detallesNuevos = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == salida.BultoId).ToList();
+
+                    // Simular stock final
+                    var productosAfectados = new Dictionary<int, int>();
+
+                    var productosIds = detallesAntiguos.Select(d => d.ProductoId)
+                                                       .Union(detallesNuevos.Select(d => d.ProductoId))
+                                                       .Distinct();
+
+                    foreach (var productoId in productosIds)
+                    {
+                        var producto = await _productoManager.ObtenerPorId(productoId);
+                        if (producto != null)
+                        {
+                            productosAfectados[productoId] = producto.CantidadEnStock;
+                        }
+                    }
+
+                    // Revertir salida anterior (sumar stock)
+                    foreach (var detalle in detallesAntiguos)
+                    {
+                        if (productosAfectados.ContainsKey(detalle.ProductoId))
+                        {
+                            productosAfectados[detalle.ProductoId] += detalle.Cantidad;
+                        }
+                    }
+
+                    // Simular nueva salida (restar stock)
+                    foreach (var detalle in detallesNuevos)
+                    {
+                        if (productosAfectados.ContainsKey(detalle.ProductoId))
+                        {
+                            productosAfectados[detalle.ProductoId] -= detalle.Cantidad;
+                        }
+                    }
+
+                    // Verificar que no queden productos con stock negativo
+                    var productosConStockNegativo = productosAfectados.Where(p => p.Value < 0).ToList();
+                    if (productosConStockNegativo.Any())
+                    {
+                        var mensaje = string.Join(", ", productosConStockNegativo.Select(p => $"Producto ID {p.Key}: stock insuficiente"));
+                        return Json(new { success = false, message = $"No se puede realizar la actualización. {mensaje}" });
+                    }
+
+                    // Revertir detalles antiguos (sumar stock)
+                    foreach (var detalle in detallesAntiguos)
                     {
                         var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
                         if (producto != null)
@@ -158,27 +216,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                         }
                     }
 
-                    // Actualizar la salida
-                    salidaExistente.Fecha = salida.Fecha;
-                    salidaExistente.UsuarioId = salida.UsuarioId;
-                    salidaExistente.BultoId = salida.BultoId;
-
-                    await _salidaManager.Actualizar(salidaExistente);
-
-                    // Obtener los nuevos detalles de la salida
-                    var detallesNuevos = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == salida.BultoId);
-
-                    // Verificar que haya suficiente stock antes de procesar la nueva salida
-                    foreach (var detalle in detallesNuevos)
-                    {
-                        var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
-                        if (producto != null && producto.CantidadEnStock < detalle.Cantidad)
-                        {
-                            return Json(new { success = false, message = $"No hay suficiente stock para el producto {producto.Nombre}. Actualización cancelada." });
-                        }
-                    }
-
-                    // Procesar la nueva salida
+                    // Aplicar nuevos detalles (restar stock)
                     foreach (var detalle in detallesNuevos)
                     {
                         var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
@@ -188,6 +226,13 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                             await _productoManager.Actualizar(producto);
                         }
                     }
+
+                    // Actualizar salida
+                    salidaExistente.Fecha = salida.Fecha;
+                    salidaExistente.UsuarioId = salida.UsuarioId;
+                    salidaExistente.BultoId = salida.BultoId;
+
+                    await _salidaManager.Actualizar(salidaExistente);
                 }
 
                 return Json(new { success = true, message = "Salida guardada correctamente." });
@@ -294,7 +339,14 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         private async Task CargarListas()
         {
             ViewBag.Usuarios = _userManager.Users.ToList();
-            ViewBag.Bultos = await _bultoManager.ObtenerTodos();
+            var bultos = await _bultoManager.ObtenerTodos();
+    var detalles = await _detalleBultoManager.ObtenerTodos();
+
+    // Obtener IDs de bultos que tienen al menos un detalle
+    var bultosConDetallesIds = detalles.Select(d => d.BultoId).Distinct();
+
+    // Filtrar solo los bultos que tienen detalles
+    ViewBag.Bultos = bultos.Where(b => bultosConDetallesIds.Contains(b.Id)).ToList();
         }
     }
 }

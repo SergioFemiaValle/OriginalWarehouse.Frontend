@@ -93,7 +93,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
             {
                 // Verificar si el bulto ya tiene una entrada asociada
                 var entradaExistentePorBulto = (await _entradaManager.ObtenerTodas()).Where(e => e.BultoId == entrada.BultoId);
-                if (entrada.Id == 0 && entradaExistentePorBulto != null)
+                if (entrada.Id == 0 && entradaExistentePorBulto.Any())
                 {
                     return Json(new { success = true, message = "Este bulto ya tiene una entrada registrada." });
                 }
@@ -102,6 +102,12 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 {
                     // Obtener los productos en DetalleBulto
                     var detalles = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == entrada.BultoId);
+
+                    if (!detalles.Any())
+                    {
+                        return Json(new { success = true, message = "No se puede crear una entrada sin detalles." });
+                    }
+
                     foreach (var detalle in detalles)
                     {
                         var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
@@ -119,8 +125,55 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                     var entradaExistente = await _entradaManager.ObtenerPorId(entrada.Id);
                     if (entradaExistente == null) return NotFound();
 
+                    // Obtener detalles antiguos y nuevos
+                    var detallesAnteriores = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == entradaExistente.BultoId).ToList();
+                    var detallesNuevos = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == entrada.BultoId).ToList();
+
+                    // Preparar diccionario para simular stock
+                    var productosAfectados = new Dictionary<int, int>();
+
+                    var productosIds = detallesAnteriores.Select(d => d.ProductoId)
+                                                       .Union(detallesNuevos.Select(d => d.ProductoId))
+                                                       .Distinct();
+
+                    foreach (var productoId in productosIds)
+                    {
+                        var producto = await _productoManager.ObtenerPorId(productoId);
+                        if (producto != null)
+                        {
+                            productosAfectados[productoId] = producto.CantidadEnStock;
+                        }
+                    }
+
+                    // Simular reversión del stock anterior
+                    foreach (var detalle in detallesAnteriores)
+                    {
+                        if (productosAfectados.ContainsKey(detalle.ProductoId))
+                        {
+                            productosAfectados[detalle.ProductoId] -= detalle.Cantidad;
+                        }
+                    }
+
+                    // Simular aplicación de nuevos detalles
+                    foreach (var detalle in detallesNuevos)
+                    {
+                        if (productosAfectados.ContainsKey(detalle.ProductoId))
+                        {
+                            productosAfectados[detalle.ProductoId] += detalle.Cantidad;
+                        }
+                    }
+
+                    // Comprobar que ningún stock queda negativo
+                    var productosConStockNegativo = productosAfectados.Where(p => p.Value < 0).ToList();
+
+                    if (productosConStockNegativo.Any())
+                    {
+                        var mensaje = string.Join(", ", productosConStockNegativo.Select(p => $"Producto ID {p.Key}: stock insuficiente"));
+                        return Json(new { success = true, message = $"No se puede realizar la operación. {mensaje}" });
+                    }
+
                     // Revertir el stock de los productos de la entrada anterior
-                    var detallesAnteriores = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == entrada.BultoId);
+                    //var detallesAnteriores = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == entradaExistente.BultoId);
                     foreach (var detalle in detallesAnteriores)
                     {
                         var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
@@ -139,7 +192,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                     await _entradaManager.Actualizar(entradaExistente);
 
                     // Aplicar los nuevos detalles de la entrada
-                    var detallesNuevos = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == entrada.BultoId);
+                    //var detallesNuevos = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == entrada.BultoId);
                     foreach (var detalle in detallesNuevos)
                     {
                         var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
@@ -263,7 +316,14 @@ namespace OriginalWarehouse.Web.MVC.Controllers
         private async Task CargarListas()
         {
             ViewBag.Usuarios = _userManager.Users.ToList();
-            ViewBag.Bultos = await _bultoManager.ObtenerTodos();
+            var bultos = await _bultoManager.ObtenerTodos();
+            var detalles = await _detalleBultoManager.ObtenerTodos();
+
+            // Obtener IDs de bultos que tienen al menos un detalle
+            var bultosConDetallesIds = detalles.Select(d => d.BultoId).Distinct();
+
+            // Filtrar solo los bultos que tienen detalles
+            ViewBag.Bultos = bultos.Where(b => bultosConDetallesIds.Contains(b.Id)).ToList();
         }
     }
 }

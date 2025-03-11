@@ -147,14 +147,14 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                 // Obtener los detalles del bulto antes de eliminarlo
                 var detallesBulto = (await _detalleBultoManager.ObtenerTodos()).Where(d => d.BultoId == id);
 
-                if (tieneEntrada != null || tieneSalida != null)
+                if (tieneEntrada.Any() || tieneSalida.Any())
                 {
                     foreach (var detalle in detallesBulto)
                     {
                         var producto = await _productoManager.ObtenerPorId(detalle.ProductoId);
                         if (producto != null)
                         {
-                            if (tieneEntrada != null)
+                            if (tieneEntrada.Any())
                             {
                                 producto.CantidadEnStock -= detalle.Cantidad; // Reducir stock si estaba en una entrada
                                 foreach(var entrada in tieneEntrada)
@@ -162,7 +162,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                                     await _entradaManager.Eliminar(entrada.Id);
                                 }
                             }
-                            if (tieneSalida != null)
+                            if (tieneSalida.Any())
                             {
                                 producto.CantidadEnStock += detalle.Cantidad; // Devolver stock si estaba en una salida
                                 foreach(var salida in tieneSalida)

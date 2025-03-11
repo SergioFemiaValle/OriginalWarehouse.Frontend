@@ -100,23 +100,27 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                         var bulto = await _bultoManager.ObtenerPorId(detalle.BultoId);
                         if (bulto != null)
                         {
-                            var tieneEntrada = await _entradaManager.ObtenerPorId(detalle.BultoId) ?? null;
-                            var tieneSalida = await _salidaManager.ObtenerPorId(detalle.BultoId) ?? null;
+                            var tieneEntrada = (await _entradaManager.ObtenerTodas()).Where(e => e.BultoId == detalle.BultoId);
+                            var tieneSalida = (await _salidaManager.ObtenerTodas()).Where(s => s.BultoId == detalle.BultoId);
 
-                            if (tieneEntrada != null)
+                            //Simulacion stock final antes de aplicar cambios
+                            int stockFinal = producto.CantidadEnStock;
+                            if (tieneEntrada.Any())
                             {
-                                producto.CantidadEnStock += detalle.Cantidad; // Incrementar stock si es una entrada
+                                stockFinal += detalle.Cantidad; // Incrementar stock si es una entrada
                             }
 
-                            if (tieneSalida != null)
+                            if (tieneSalida.Any())
                             {
-                                if (producto.CantidadEnStock < detalle.Cantidad)
-                                {
-                                    return Json(new { success = true, message = $"No hay suficiente stock para el producto {producto.Nombre}. Acción cancelada." });
-                                }
-                                producto.CantidadEnStock -= detalle.Cantidad; // Reducir stock si es una salida
+                                stockFinal -= detalle.Cantidad; // Reducir stock si es una salida
                             }
 
+                            if (stockFinal < 0)
+                            {
+                                return Json(new { success = true, message = $"No hay suficiente stock para el producto {producto.Nombre}. Acción cancelada." });
+                            }
+
+                            producto.CantidadEnStock = stockFinal;
                             await _productoManager.Actualizar(producto);
                         }
                     }
@@ -133,18 +137,26 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                         var bulto = await _bultoManager.ObtenerPorId(detalleExistente.BultoId);
                         if (bulto != null)
                         {
-                            var tieneEntrada = await _entradaManager.ObtenerPorId(detalleExistente.BultoId) ?? null;
-                            var tieneSalida = await _salidaManager.ObtenerPorId(detalleExistente.BultoId) ?? null;
+                            var tieneEntrada = (await _entradaManager.ObtenerTodas()).Where(e => e.BultoId == detalle.BultoId);
+                            var tieneSalida = (await _salidaManager.ObtenerTodas()).Where(s => s.BultoId == detalle.BultoId);
 
-                            // Revertir stock anterior antes de actualizar
-                            if (tieneEntrada != null)
+                            //Simulacion stcok final antes de aplicar cambios
+                            int stockFinal = producto.CantidadEnStock;
+                            if (tieneEntrada.Any())
                             {
-                                producto.CantidadEnStock -= detalleExistente.Cantidad; // Revertir stock previo
+                                stockFinal -= detalleExistente.Cantidad; // Revertir stock previo
+                                stockFinal += detalle.Cantidad;
                             }
 
-                            if (tieneSalida != null)
+                            if (tieneSalida.Any())
                             {
-                                producto.CantidadEnStock += detalleExistente.Cantidad; // Revertir salida previa
+                                stockFinal += detalleExistente.Cantidad; // Revertir salida previa
+                                stockFinal -= detalle.Cantidad;
+                            }
+
+                            if (stockFinal < 0)
+                            {
+                                return Json(new { success = true, message = $"No hay suficiente stock para el producto {producto.Nombre}. Acción cancelada." });
                             }
 
                             // Aplicar nueva cantidad
@@ -154,19 +166,7 @@ namespace OriginalWarehouse.Web.MVC.Controllers
                             detalleExistente.Lote = detalle.Lote;
                             detalleExistente.FechaDeCaducidad = detalle.FechaDeCaducidad;
 
-                            // Aplicar nuevo stock
-                            if (tieneEntrada != null)
-                            {
-                                producto.CantidadEnStock += detalle.Cantidad; // Aplicar nuevo stock si es una entrada
-                            }
-                            if (tieneSalida != null)
-                            {
-                                if (producto.CantidadEnStock < detalle.Cantidad)
-                                {
-                                    return Json(new { success = true, message = $"No hay suficiente stock para el producto {producto.Nombre}. Acción cancelada." });
-                                }
-                                producto.CantidadEnStock -= detalle.Cantidad; // Aplicar nueva reducción si es una salida
-                            }
+                            producto.CantidadEnStock = stockFinal;
 
                             await _productoManager.Actualizar(producto);
                             await _detalleBultoManager.Actualizar(detalleExistente);
